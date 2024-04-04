@@ -39,43 +39,47 @@ const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
         title: "Token Granted",
         description: session.user.accessToken,
       });
-      spotifyApi.getMyDevices().then(
-        (res) => {
-          let availableDevices = res.body.devices;
-          console.log("Use Effect availible devices: ", availableDevices);
-          if (availableDevices) {
-            spotifyApi
-              .transferMyPlayback([availableDevices[0].id!])
-              .then((res) => {
-                console.log("Use Effect Transfer Playback: ", res);
-                spotifyApi.getMyCurrentPlayingTrack().then((res) => {
-                  console.log("Use Effect Current Track: ", res);
-                  setIsPlaying(res.body.is_playing); //Initial set of Is Playing
-
-                  updateTrackData(res.body.item);
-                  updatePlaylist();
-                });
-                //TODO comment this use effect promise chain and continue dev here with finding last played song on device
-              });
-          } else {
-            toast({
-              title: "No Devices found",
-              description: "There we no active devices found",
-            });
-          }
-
-          toast({
-            title: "Session Info",
-            description: availableDevices.map((device) => {
-              return device.name;
-            }),
+      spotifyApi.getMyCurrentPlaybackState().then((res) => {
+        console.log(res);
+        if (res.body) {
+          spotifyApi.getMyCurrentPlayingTrack().then((res) => {
+            console.log("Use Effect Current Track: ", res);
+            setIsPlaying(res.body.is_playing); //Initial set of Is Playing
+            updateTrackData(res.body.item);
+            updatePlaylist();
           });
-        },
-        function (err) {
-          //if the user making the request is non-premium, a 403 FORBIDDEN response code will be returned
-          console.log("Something went wrong!", err);
+        } else {
+          //If no device is currently active, transfer playback
+          spotifyApi.getMyDevices().then(
+            (res) => {
+              let availableDevices = res.body.devices;
+              console.log("Use Effect availible devices: ", availableDevices);
+              if (availableDevices) {
+                spotifyApi
+                  .transferMyPlayback([availableDevices[0].id!])
+                  .then((res) => {
+                    console.log("Use Effect Transfer Playback: ", res);
+                    spotifyApi.getMyCurrentPlayingTrack().then((res) => {
+                      console.log("Use Effect Current Track: ", res);
+                      setIsPlaying(res.body.is_playing); //Initial set of Is Playing
+                      updateTrackData(res.body.item);
+                      updatePlaylist();
+                    });
+                  });
+              } else {
+                toast({
+                  title: "No Devices found",
+                  description: "There we no active devices found",
+                });
+              }
+            },
+            function (err) {
+              //if the user making the request is non-premium, a 403 FORBIDDEN response code will be returned
+              console.log("Something went wrong!", err);
+            }
+          );
         }
-      );
+      });
     }
   }, [status, session]);
 
@@ -229,10 +233,12 @@ const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
     if (isPlaying) {
       spotifyApi.skipToNext().then(() => {
         console.log("Skipped to next track");
-        spotifyApi.getMyCurrentPlayingTrack().then((res) => {
-          console.log("Post skip update");
-          updateTrackData(res.body.item);
-        });
+        setTimeout(() => {
+          spotifyApi.getMyCurrentPlayingTrack().then((res) => {
+            console.log("Post skip update");
+            updateTrackData(res.body.item);
+          });
+        }, 500);
       });
     }
   };
@@ -241,10 +247,12 @@ const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
     if (isPlaying) {
       spotifyApi.skipToPrevious().then(() => {
         console.log("Skipped to previous track");
-        spotifyApi.getMyCurrentPlayingTrack().then((res) => {
-          console.log("Post skip update");
-          updateTrackData(res.body.item);
-        });
+        setTimeout(() => {
+          spotifyApi.getMyCurrentPlayingTrack().then((res) => {
+            console.log("Post skip update");
+            updateTrackData(res.body.item);
+          });
+        }, 500);
       });
     }
   };
@@ -303,7 +311,10 @@ const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
           "grid items-center grid-cols-1 grid-rows-5 gap-10"
         )}
       >
-        <div id="User Info" className="flex items-center h-10 grid-rows-2">
+        <div
+          id="User Info"
+          className="flex gap-2 items-center h-10 grid-rows-2"
+        >
           <img
             className="flex-1 h-10 w-10 max-w-10"
             src={session?.user.image!}

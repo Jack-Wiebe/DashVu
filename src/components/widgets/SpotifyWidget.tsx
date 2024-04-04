@@ -4,13 +4,19 @@ import { Button, buttonVariants } from "../ui/Button";
 import { cn } from "@/lib/utils";
 import { useSession } from "next-auth/react";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronFirst, Play, Pause, ChevronLast } from "lucide-react";
+import {
+  ChevronFirst,
+  Play,
+  Pause,
+  ChevronLast,
+  Shuffle,
+  Repeat2,
+} from "lucide-react";
 import { spotifyApi } from "../../lib/spotify";
 
 const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
   const { data: session, status: status } = useSession();
   let [isPlaying, setIsPlaying] = useState<boolean>();
-  let [currentPlaylist, setCurrentPlaylist] = useState<string>();
   let [trackData, setTrackData] = useState<any>();
   let [playlistData, setPlaylistData] = useState<any>();
   const { toast } = useToast();
@@ -74,8 +80,12 @@ const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
   }, [status, session]);
 
   useEffect(() => {
-    console.log("Update Play State");
+    console.log("Update Play State in Effect");
   }, [isPlaying, spotifyApi, session]);
+
+  useEffect(() => {
+    console.log("Update Track Data in Effect");
+  }, [trackData]);
 
   const updateTrackData = (
     track: SpotifyApi.TrackObjectFull | SpotifyApi.EpisodeObject | null
@@ -86,8 +96,29 @@ const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
         description: "No current track found",
       });
     }
+    console.log("current track is: " + track?.name);
     setTrackData(track);
 
+    // spotifyApi.getMyCurrentPlayingTrack().then((res) => {
+    //   console.log("Update Track Data: ", res);
+    //   const track = res.body;
+    //   //setIsPlaying(track.is_playing);
+    //   setTrackData(track.item);
+    //   if (track.item && track.is_playing) {
+    //     // const remaining_ms = track.timestamp - (track.progress_ms ?? 0); //TODO: confirm this actually works, create timeout for updating song
+    //     // console.log(remaining_ms);
+    //     // setUpdateTimeout(remaining_ms);
+    //   } else if (track.item) {
+    //   } else {
+    //     toast({
+    //       title: "Could not find Track",
+    //       description: "No current track found",
+    //     });
+    //   }
+    // });
+  };
+
+  const getTrackData = () => {
     spotifyApi.getMyCurrentPlayingTrack().then((res) => {
       console.log("Update Track Data: ", res);
       const track = res.body;
@@ -150,21 +181,28 @@ const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
 
   const updatePlaylist = function () {
     spotifyApi.getMyCurrentPlayingTrack().then((res) => {
-      let playlistID = res?.body?.context?.uri.split(":").pop();
-      if (playlistID == null) {
+      const ID = res?.body?.context?.uri.split(":").pop();
+      const type = res?.body?.context?.uri.split(":").slice(-2)[0];
+      if (ID == null) {
         console.error("no current playlist");
-        playlistID = "";
+        return;
       }
-      console.log("playlist ID: " + playlistID);
-      spotifyApi.getPlaylist(playlistID).then((res) => {
-        console.log("playlist: ");
-        console.log(res);
-        setPlaylistData(res.body);
-      });
-    });
-    //
+      console.log("playlist ID: " + ID);
 
-    //
+      if (type == "album") {
+        spotifyApi.getAlbum(ID).then((res) => {
+          console.log("Album: ");
+          console.log(res);
+          setPlaylistData(res.body);
+        });
+      } else if (type == "playlist") {
+        spotifyApi.getPlaylist(ID).then((res) => {
+          console.log("Playlist: ");
+          console.log(res);
+          setPlaylistData(res.body);
+        });
+      }
+    });
   };
 
   const handleClickPlay = () => {
@@ -187,7 +225,7 @@ const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
     });
   };
 
-  const handleClickNext = () => {
+  const handleClickNext = async () => {
     if (isPlaying) {
       spotifyApi.skipToNext().then(() => {
         console.log("Skipped to next track");
@@ -197,25 +235,6 @@ const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
         });
       });
     }
-
-    // spotifyApi.getMyCurrentPlayingTrack().then((res) => {
-    //   console.log(res);
-
-    //   //setTrackData(res.body.item);
-
-    //   if (res.body?.is_playing) {
-    //     spotifyApi.skipToNext().then(
-    //       () => {
-    //         console.log("Skipped to next track");
-    //         //updateTrackData();
-    //       },
-    //       (err) => {
-    //         //if the user making the request is non-premium, a 403 FORBIDDEN response code will be returned
-    //         console.log("Something went wrong!", err);
-    //       }
-    //     );
-    //   }
-    // });
   };
 
   const handleClickPrevious = () => {
@@ -228,25 +247,6 @@ const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
         });
       });
     }
-
-    // spotifyApi.getMyCurrentPlayingTrack().then((res) => {
-    //   console.log(res);
-
-    //   //setTrackData(res.body.item);
-
-    //   if (res.body?.is_playing) {
-    //     spotifyApi.skipToPrevious().then(
-    //       () => {
-    //         console.log("Playback Stopped");
-    //         updateTrackData();
-    //       },
-    //       (err) => {
-    //         //if the user making the request is non-premium, a 403 FORBIDDEN response code will be returned
-    //         console.log("Something went wrong!", err);
-    //       }
-    //     );
-    //   }
-    // });
   };
 
   const debug2 = () => {
@@ -265,7 +265,8 @@ const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
   const debug1 = () => {
     //updateDeviceName();
     //updatePlaylist();
-    console.log(trackData.artists[0].name);
+    //spotifyApi.getQueue();
+    console.log(trackData.album.images[1].url);
   };
 
   const debug = () => {
@@ -299,10 +300,10 @@ const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
       <div
         className={cn(
           className,
-          "grid items-center grid-cols-1 grid-rows-4 gap-4"
+          "grid items-center grid-cols-1 grid-rows-5 gap-10"
         )}
       >
-        <div className="flex items-center h-10 grid-rows-2">
+        <div id="User Info" className="flex items-center h-10 grid-rows-2">
           <img
             className="flex-1 h-10 w-10 max-w-10"
             src={session?.user.image!}
@@ -310,20 +311,27 @@ const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
           <div className="flex-1">{session?.user.name}</div>
           <div>{playlistData?.name}</div>
         </div>
-        <div className="flex items-center justify-evenly gap-2">
-          <Button onClick={debug}>init</Button>
-          <Button onClick={debug1}>get device</Button>
-          <Button onClick={debug2}>get track</Button>
+
+        <div id="Album Cover" className="flex justify-center row-span-2">
+          <img className="w-40" src={trackData?.album?.images[1]?.url} />
         </div>
-        <div className="flex flex-col items-center justify-evenly gap-2">
-          <p>{trackData?.name ?? trackData?.name}</p>
-          <p>
+
+        <div
+          id="Track Info"
+          className="flex flex-col items-center justify-evenly gap-2"
+        >
+          <p className="text-sm">{trackData?.name ?? trackData?.name}</p>
+          <p className="text-xs">
             {trackData?.artists.map((a: any, i: number, artists: any) => {
               return a.name + (i + 1 < artists.length ? ", " : "");
             })}
           </p>
         </div>
-        <div className="flex items-center justify-evenly gap-2">
+
+        <div id="buttons" className="flex items-center justify-evenly gap-2">
+          <Button onClick={() => {} /*handleClickShuffle*/}>
+            <Shuffle />
+          </Button>
           <Button onClick={handleClickPrevious}>
             <ChevronFirst />
           </Button>
@@ -335,7 +343,17 @@ const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
           <Button onClick={handleClickNext}>
             <ChevronLast />
           </Button>
+
+          <Button onClick={() => {} /*handleClickRepeat*/}>
+            <Repeat2 />
+          </Button>
         </div>
+
+        {/* <div className="flex items-center justify-evenly gap-2">
+          <Button onClick={debug}>init</Button>
+          <Button onClick={debug1}>get device</Button>
+          <Button onClick={debug2}>get track</Button>
+        </div> */}
       </div>
     );
   } else {

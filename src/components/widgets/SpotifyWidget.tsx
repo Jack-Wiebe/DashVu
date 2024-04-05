@@ -85,7 +85,7 @@ const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
 
   useEffect(() => {
     console.log("Update Play State in Effect");
-  }, [isPlaying, spotifyApi, session]);
+  }, [isPlaying]);
 
   useEffect(() => {
     console.log("Update Track Data in Effect");
@@ -308,12 +308,12 @@ const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
       <div
         className={cn(
           className,
-          "grid items-center grid-cols-1 grid-rows-5 gap-10"
+          "grid items-center grid-cols-1 grid-rows-5 text-sm gap-8"
         )}
       >
         <div
           id="User Info"
-          className="flex gap-2 items-center h-10 grid-rows-2"
+          className="flex gap-2 items-center h-10 grid-rows-2 overflow-clip"
         >
           <img
             className="flex-1 h-10 w-10 max-w-10"
@@ -329,9 +329,9 @@ const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
 
         <div
           id="Track Info"
-          className="flex flex-col items-center justify-evenly gap-2"
+          className="flex flex-col items-center justify-evenly gap-2 text-center"
         >
-          <p className="text-sm">{trackData?.name ?? trackData?.name}</p>
+          <p>{trackData?.name ?? trackData?.name}</p>
           <p className="text-xs">
             {trackData?.artists.map((a: any, i: number, artists: any) => {
               return a.name + (i + 1 < artists.length ? ", " : "");
@@ -339,23 +339,32 @@ const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
           </p>
         </div>
 
-        <div id="buttons" className="flex items-center justify-evenly gap-2">
-          <Button onClick={() => {} /*handleClickShuffle*/}>
+        <div
+          id="buttons"
+          className="flex items-center justify-evenly lg:gap-2 sm:gap-0"
+        >
+          <Button
+            className="sm:max-w-12"
+            onClick={() => {} /*handleClickShuffle*/}
+          >
             <Shuffle />
           </Button>
-          <Button onClick={handleClickPrevious}>
+          <Button className="sm:max-w-12" onClick={handleClickPrevious}>
             <ChevronFirst />
           </Button>
 
-          <Button onClick={handleClickPlay}>
+          <Button className="sm:max-w-12" onClick={handleClickPlay}>
             {isPlaying ? <Pause /> : <Play />}
           </Button>
 
-          <Button onClick={handleClickNext}>
+          <Button className="sm:max-w-12" onClick={handleClickNext}>
             <ChevronLast />
           </Button>
 
-          <Button onClick={() => {} /*handleClickRepeat*/}>
+          <Button
+            className="sm:max-w-12"
+            onClick={() => {} /*handleClickRepeat*/}
+          >
             <Repeat2 />
           </Button>
         </div>

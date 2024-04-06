@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import WidgetProps from "@/types/widget";
+import * as Progress from "@radix-ui/react-progress";
 import { Button, buttonVariants } from "../ui/Button";
 import { cn } from "@/lib/utils";
 import { useSession } from "next-auth/react";
@@ -19,6 +20,7 @@ const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
   let [isPlaying, setIsPlaying] = useState<boolean>();
   let [trackData, setTrackData] = useState<any>();
   let [playlistData, setPlaylistData] = useState<any>();
+  let [progress, SetProgress] = useState<number>();
   const { toast } = useToast();
 
   let updateCB: NodeJS.Timeout;
@@ -42,7 +44,7 @@ const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
       spotifyApi.getMyCurrentPlaybackState().then((res) => {
         console.log(res);
         if (res.body) {
-          getTrackData();
+          initTrackData();
         } else {
           //If no device is currently active, transfer playback
           spotifyApi.getMyDevices().then(
@@ -54,7 +56,7 @@ const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
                   .transferMyPlayback([availableDevices[0].id!])
                   .then((res) => {
                     console.log("Use Effect Transfer Playback: ", res);
-                    getTrackData();
+                    initTrackData();
                   });
               } else {
                 toast({
@@ -79,6 +81,20 @@ const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
   useEffect(() => {
     console.log("Update Track Data in Effect");
   }, [trackData]);
+
+  const updateProgress = () => {
+    spotifyApi.getMyCurrentPlaybackState().then((state) => {
+      if (state.body.progress_ms && state.body.item?.duration_ms) {
+        console.log(
+          "Percent: " +
+            (state.body.progress_ms / state.body.item.duration_ms) * 100
+        );
+        SetProgress(
+          (state.body.progress_ms / state.body.item.duration_ms) * 100
+        );
+      }
+    });
+  };
 
   const updateTrackData = (
     track: SpotifyApi.TrackObjectFull | SpotifyApi.EpisodeObject | null
@@ -111,12 +127,13 @@ const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
     // });
   };
 
-  const getTrackData = () => {
+  const initTrackData = () => {
     spotifyApi.getMyCurrentPlayingTrack().then((res) => {
       console.log("Use Effect Current Track: ", res);
       setIsPlaying(res.body.is_playing); //Initial set of Is Playing
       updateTrackData(res.body.item);
       updatePlaylist();
+      updateProgress();
     });
     // const remaining_ms = track.timestamp - (track.progress_ms ?? 0); //TODO: confirm this actually works, create timeout for updating song
     // console.log(remaining_ms);
@@ -193,20 +210,17 @@ const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
     spotifyApi.getMyCurrentPlayingTrack().then(
       (res) => {
         console.log("Toggle Play: ", res);
-        //setTrackData(res.body.item);
-        //setIsPlaying(!res.body.is_playing); //update UI before promise is returned, should update once track is updated
-
         if (res.body?.is_playing) {
           spotifyApi.pause();
           console.log("Playback Stopped");
           setIsPlaying(false);
-          updateTrackData(res.body?.item);
         } else {
           spotifyApi.play();
           console.log("Playback started");
           setIsPlaying(true);
-          updateTrackData(res.body?.item);
         }
+        updateTrackData(res.body?.item);
+        updateProgress();
       },
       function (err) {
         console.log("Something went wrong!", err);
@@ -222,6 +236,7 @@ const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
           spotifyApi.getMyCurrentPlayingTrack().then((res) => {
             console.log("Post skip update");
             updateTrackData(res.body.item);
+            updateProgress();
           });
         }, 500);
       });
@@ -236,6 +251,7 @@ const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
           spotifyApi.getMyCurrentPlayingTrack().then((res) => {
             console.log("Post skip update");
             updateTrackData(res.body.item);
+            updateProgress();
           });
         }, 500);
       });
@@ -259,7 +275,8 @@ const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
     //updateDeviceName();
     //updatePlaylist();
     //spotifyApi.getQueue();
-    console.log(trackData.album.images[1].url);
+    //console.log(trackData.album.images[1].url);
+    updateProgress();
   };
 
   const debug = () => {
@@ -322,6 +339,18 @@ const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
               return a.name + (i + 1 < artists.length ? ", " : "");
             })}
           </p>
+
+          <Progress.Root
+            value={progress}
+            className="w-10/12 h-2 overflow-hidden bg-black rounded-full mt-1"
+          >
+            <Progress.Indicator
+              className="bg-white w-full h-full"
+              style={{
+                transform: `translateX(-${100 - (progress ? progress : 0)}%)`,
+              }}
+            />
+          </Progress.Root>
         </div>
 
         <div

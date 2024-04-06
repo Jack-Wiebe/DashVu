@@ -42,12 +42,7 @@ const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
       spotifyApi.getMyCurrentPlaybackState().then((res) => {
         console.log(res);
         if (res.body) {
-          spotifyApi.getMyCurrentPlayingTrack().then((res) => {
-            console.log("Use Effect Current Track: ", res);
-            setIsPlaying(res.body.is_playing); //Initial set of Is Playing
-            updateTrackData(res.body.item);
-            updatePlaylist();
-          });
+          getTrackData();
         } else {
           //If no device is currently active, transfer playback
           spotifyApi.getMyDevices().then(
@@ -59,12 +54,7 @@ const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
                   .transferMyPlayback([availableDevices[0].id!])
                   .then((res) => {
                     console.log("Use Effect Transfer Playback: ", res);
-                    spotifyApi.getMyCurrentPlayingTrack().then((res) => {
-                      console.log("Use Effect Current Track: ", res);
-                      setIsPlaying(res.body.is_playing); //Initial set of Is Playing
-                      updateTrackData(res.body.item);
-                      updatePlaylist();
-                    });
+                    getTrackData();
                   });
               } else {
                 toast({
@@ -74,7 +64,6 @@ const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
               }
             },
             function (err) {
-              //if the user making the request is non-premium, a 403 FORBIDDEN response code will be returned
               console.log("Something went wrong!", err);
             }
           );
@@ -124,22 +113,14 @@ const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
 
   const getTrackData = () => {
     spotifyApi.getMyCurrentPlayingTrack().then((res) => {
-      console.log("Update Track Data: ", res);
-      const track = res.body;
-      //setIsPlaying(track.is_playing);
-      setTrackData(track.item);
-      if (track.item && track.is_playing) {
-        // const remaining_ms = track.timestamp - (track.progress_ms ?? 0); //TODO: confirm this actually works, create timeout for updating song
-        // console.log(remaining_ms);
-        // setUpdateTimeout(remaining_ms);
-      } else if (track.item) {
-      } else {
-        toast({
-          title: "Could not find Track",
-          description: "No current track found",
-        });
-      }
+      console.log("Use Effect Current Track: ", res);
+      setIsPlaying(res.body.is_playing); //Initial set of Is Playing
+      updateTrackData(res.body.item);
+      updatePlaylist();
     });
+    // const remaining_ms = track.timestamp - (track.progress_ms ?? 0); //TODO: confirm this actually works, create timeout for updating song
+    // console.log(remaining_ms);
+    // setUpdateTimeout(remaining_ms);
   };
 
   const setUpdateTimeout = function (remaining_ms: number) {
@@ -177,7 +158,6 @@ const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
         });
       },
       function (err) {
-        //if the user making the request is non-premium, a 403 FORBIDDEN response code will be returned
         console.log("Something went wrong!", err);
       }
     );
@@ -210,23 +190,28 @@ const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
   };
 
   const handleClickPlay = () => {
-    spotifyApi.getMyCurrentPlayingTrack().then((res) => {
-      console.log("Toggle Play: ", res);
-      //setTrackData(res.body.item);
-      //setIsPlaying(!res.body.is_playing); //update UI before promise is returned, should update once track is updated
+    spotifyApi.getMyCurrentPlayingTrack().then(
+      (res) => {
+        console.log("Toggle Play: ", res);
+        //setTrackData(res.body.item);
+        //setIsPlaying(!res.body.is_playing); //update UI before promise is returned, should update once track is updated
 
-      if (res.body?.is_playing) {
-        spotifyApi.pause();
-        console.log("Playback Stopped");
-        setIsPlaying(false);
-        updateTrackData(res.body?.item);
-      } else {
-        spotifyApi.play();
-        console.log("Playback started");
-        setIsPlaying(true);
-        updateTrackData(res.body?.item);
+        if (res.body?.is_playing) {
+          spotifyApi.pause();
+          console.log("Playback Stopped");
+          setIsPlaying(false);
+          updateTrackData(res.body?.item);
+        } else {
+          spotifyApi.play();
+          console.log("Playback started");
+          setIsPlaying(true);
+          updateTrackData(res.body?.item);
+        }
+      },
+      function (err) {
+        console.log("Something went wrong!", err);
       }
-    });
+    );
   };
 
   const handleClickNext = async () => {

@@ -1,10 +1,6 @@
 import React, { useEffect, useState } from "react";
-import WidgetProps from "@/types/widget";
 import * as Progress from "@radix-ui/react-progress";
-import { Button, buttonVariants } from "../ui/Button";
-import { cn } from "@/lib/utils";
 import { useSession } from "next-auth/react";
-import { useToast } from "@/hooks/use-toast";
 import {
   ChevronFirst,
   Play,
@@ -13,6 +9,11 @@ import {
   Shuffle,
   Repeat2,
 } from "lucide-react";
+
+import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
+import WidgetProps from "@/types/widget";
+import { Button } from "../ui/Button";
 import { spotifyApi } from "../../lib/spotify";
 
 const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
@@ -20,13 +21,14 @@ const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
   let [isPlaying, setIsPlaying] = useState<boolean>();
   let [trackData, setTrackData] = useState<any>();
   let [playlistData, setPlaylistData] = useState<any>();
-  let [progress, SetProgress] = useState<number>();
+  let [progress, SetProgress] = useState<number>(0);
   const { toast } = useToast();
 
   let updateCB: NodeJS.Timeout;
+  let progressCB: NodeJS.Timeout;
 
   useEffect(() => {
-    console.log(session);
+    console.log("User Session:", session);
 
     if (status === "loading") {
       toast({
@@ -42,7 +44,7 @@ const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
         description: session.user.accessToken,
       });
       spotifyApi.getMyCurrentPlaybackState().then((res) => {
-        console.log(res);
+        console.log("Initial Playback State:", res);
         if (res.body) {
           initTrackData();
         } else {
@@ -85,14 +87,46 @@ const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
   const updateProgress = () => {
     spotifyApi.getMyCurrentPlaybackState().then((state) => {
       if (state.body.progress_ms && state.body.item?.duration_ms) {
-        console.log(
-          "Percent: " +
-            (state.body.progress_ms / state.body.item.duration_ms) * 100
-        );
-        SetProgress(
-          (state.body.progress_ms / state.body.item.duration_ms) * 100
-        );
+        const percent =
+          (state.body.progress_ms / state.body.item.duration_ms) * 100;
+        console.log("Percent: " + percent);
+
+        SetProgress(percent);
+
+        //setUpdateTimeout(state.body.item?.duration_ms - state.body.progress_ms);
+        //setProgressInterval((percent * state.body.item?.duration_ms) / 100);
       }
+    });
+  };
+
+  const setProgressInterval = (interval: number) => {
+    if (progressCB) {
+      clearTimeout(progressCB);
+    }
+
+    progressCB = setInterval(() => {
+      console.log("update");
+      //if (progress) SetProgress(progress + 1);
+    }, interval);
+  };
+
+  const setUpdateTimeout = function (remaining_ms: number) {
+    if (updateCB) {
+      clearTimeout(updateCB);
+    }
+    updateCB = setTimeout(() => {
+      console.log("Auto Update Next Track Data");
+      initTrackData();
+    }, remaining_ms);
+  };
+
+  const initTrackData = () => {
+    spotifyApi.getMyCurrentPlayingTrack().then((res) => {
+      console.log("Use Effect Current Track: ", res);
+      setIsPlaying(res.body.is_playing); //Initial set of Is Playing
+      updateTrackData(res.body.item);
+      updatePlaylist();
+      updateProgress();
     });
   };
 
@@ -107,47 +141,6 @@ const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
     }
     console.log("current track is: " + track?.name);
     setTrackData(track);
-
-    // spotifyApi.getMyCurrentPlayingTrack().then((res) => {
-    //   console.log("Update Track Data: ", res);
-    //   const track = res.body;
-    //   //setIsPlaying(track.is_playing);
-    //   setTrackData(track.item);
-    //   if (track.item && track.is_playing) {
-    //     // const remaining_ms = track.timestamp - (track.progress_ms ?? 0); //TODO: confirm this actually works, create timeout for updating song
-    //     // console.log(remaining_ms);
-    //     // setUpdateTimeout(remaining_ms);
-    //   } else if (track.item) {
-    //   } else {
-    //     toast({
-    //       title: "Could not find Track",
-    //       description: "No current track found",
-    //     });
-    //   }
-    // });
-  };
-
-  const initTrackData = () => {
-    spotifyApi.getMyCurrentPlayingTrack().then((res) => {
-      console.log("Use Effect Current Track: ", res);
-      setIsPlaying(res.body.is_playing); //Initial set of Is Playing
-      updateTrackData(res.body.item);
-      updatePlaylist();
-      updateProgress();
-    });
-    // const remaining_ms = track.timestamp - (track.progress_ms ?? 0); //TODO: confirm this actually works, create timeout for updating song
-    // console.log(remaining_ms);
-    // setUpdateTimeout(remaining_ms);
-  };
-
-  const setUpdateTimeout = function (remaining_ms: number) {
-    if (updateCB) {
-      clearTimeout(updateCB);
-    }
-    updateCB = setTimeout(() => {
-      console.log("Auto Update Next Track Data");
-      //updateTrackData();
-    }, remaining_ms);
   };
 
   const updateDeviceName = function () {
@@ -192,14 +185,12 @@ const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
 
       if (type == "album") {
         spotifyApi.getAlbum(ID).then((res) => {
-          console.log("Album: ");
-          console.log(res);
+          console.log("Album:", res);
           setPlaylistData(res.body);
         });
       } else if (type == "playlist") {
         spotifyApi.getPlaylist(ID).then((res) => {
-          console.log("Playlist: ");
-          console.log(res);
+          console.log("Playlist:", res);
           setPlaylistData(res.body);
         });
       }
@@ -347,7 +338,7 @@ const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
             <Progress.Indicator
               className="bg-white w-full h-full"
               style={{
-                transform: `translateX(-${100 - (progress ? progress : 0)}%)`,
+                transform: `translateX(-${100 - progress}%)`,
               }}
             />
           </Progress.Root>

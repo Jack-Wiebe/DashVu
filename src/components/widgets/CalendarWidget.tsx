@@ -2,20 +2,30 @@ import React, { useEffect } from "react";
 import PropTypes from "prop-types";
 import { useSession } from "next-auth/react";
 
-import { gapi } from "gapi-script";
-
-import ApiCalendar from "react-google-calendar-api";
+//import ApiCalendar from "react-google-calendar-api";
 import { Calendar, momentLocalizer } from "react-big-calendar";
 import moment from "moment";
 
 import { cn } from "@/lib/utils";
 import WidgetProps from "@/types/widget";
 import { Button } from "../ui/Button";
-//import { calendar } from "@googleapis/calendar";
 
 moment.locale("en-GB");
-const localizer = momentLocalizer(moment);
-//const eventList;
+//const localizer = momentLocalizer(moment);
+// let eventList = momentLocalizer(moment);
+// //const eventList;
+
+// useEffect(() => {
+//   //ApiCalendar.handleAuthClick();
+//   if (ApiCalendar.sign()) {
+//     ApiCalendar.listUpcomingEvents(30).then(({ result }) => {
+//       console.log(result.items);
+//       eventList = formatEvents(result.items);
+//     });
+//   } else {
+//     console.log("FAIL:", ApiCalendar);
+//   }
+// }, []);
 
 const formatEvents = (events: any[]) => {
   let output: any = [];
@@ -56,40 +66,13 @@ const formatEvents = (events: any[]) => {
   return output;
 };
 
-// const getEvents = (calendarID, apiKey) => {
-//   function initiate() {
-//     gapi.client
-//       .init({
-//         apiKey: apiKey,
-//       })
-
-//       .then(function () {
-//         return gapi.client.request({
-//           path: `https://www.googleapis.com/calendar/v3/calendars/${calendarID}/events`,
-//         });
-//       })
-
-//       .then(
-//         (response) => {
-//           let events = response.result.items;
-//           return events;
-//         },
-//         function (err) {
-//           return [false, err];
-//         }
-//       );
-//   }
-
-//   gapi.load("client", initiate);
-// };
-
 const CalendarWidget: React.FC<WidgetProps> = ({ props, className }) => {
   return (
     <div className={cn(className, "flex items-center justify-evenly gap-4")}>
       CalendarWidget - {useSession()?.data?.user.name}
       {/* <Calendar
         localizer={localizer}
-        events={eventList}
+        //events={eventList}
         startAccessor="start"
         endAccessor="end"
         style={{ height: 400 }}

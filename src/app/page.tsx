@@ -7,6 +7,7 @@ import WidgetProps from "@/types/widget";
 import Widget from "@/components/Widget";
 import SpotifyWidget from "@/components/widgets/SpotifyWidget";
 import GalleryWidget from "@/components/widgets/GalleryWidget";
+import CalendarWidget from "@/components/widgets/CalendarWidget";
 
 export default function Home() {
   const { data: session, status: test } = useSession();
@@ -24,7 +25,7 @@ export default function Home() {
   const props3: WidgetProps = {
     size: "text-red",
     Icon: Icons.calendar,
-    Type: "calendar",
+    Type: CalendarWidget,
   };
 
   return (

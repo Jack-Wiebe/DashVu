@@ -1,8 +1,9 @@
 import React, { useEffect } from "react";
 import PropTypes from "prop-types";
 import { useSession } from "next-auth/react";
+import "react-big-calendar/lib/css/react-big-calendar.css";
 
-//import ApiCalendar from "react-google-calendar-api";
+import ApiCalendar from "react-google-calendar-api";
 import { Calendar, momentLocalizer } from "react-big-calendar";
 import moment from "moment";
 
@@ -11,21 +12,17 @@ import WidgetProps from "@/types/widget";
 import { Button } from "../ui/Button";
 
 moment.locale("en-GB");
-//const localizer = momentLocalizer(moment);
-// let eventList = momentLocalizer(moment);
-// //const eventList;
-
-// useEffect(() => {
-//   //ApiCalendar.handleAuthClick();
-//   if (ApiCalendar.sign()) {
-//     ApiCalendar.listUpcomingEvents(30).then(({ result }) => {
-//       console.log(result.items);
-//       eventList = formatEvents(result.items);
-//     });
-//   } else {
-//     console.log("FAIL:", ApiCalendar);
-//   }
-// }, []);
+const config: any = {
+  clientId: process.env.GOOGLE_CLIENT_ID,
+  apiKey: process.env.GOOGLE_CLIENT_SECRET,
+  scope: "https://www.googleapis.com/auth/calendar",
+  discoveryDocs: [
+    "https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest",
+  ],
+};
+const googleapi = new ApiCalendar(config);
+const localizer = momentLocalizer(moment);
+let eventList: any;
 
 const formatEvents = (events: any[]) => {
   let output: any = [];
@@ -67,16 +64,30 @@ const formatEvents = (events: any[]) => {
 };
 
 const CalendarWidget: React.FC<WidgetProps> = ({ props, className }) => {
+  useEffect(() => {
+    //googleapi.handleAuthClick();
+    if (googleapi.sign) {
+      googleapi.listUpcomingEvents(30).then((res: any) => {
+        console.log(res.items);
+        const formattedEvents = formatEvents(res.items);
+        console.log(formattedEvents);
+        eventList = formattedEvents;
+      });
+    } else {
+      console.log("FAIL:", ApiCalendar);
+    }
+  }, []);
+
   return (
     <div className={cn(className, "flex items-center justify-evenly gap-4")}>
-      CalendarWidget - {useSession()?.data?.user.name}
-      {/* <Calendar
+      CalendarWidget - {googleapi.calendar}
+      <Calendar
         localizer={localizer}
-        //events={eventList}
+        events={eventList}
         startAccessor="start"
         endAccessor="end"
         style={{ height: 400 }}
-      /> */}
+      />
     </div>
   );
 };

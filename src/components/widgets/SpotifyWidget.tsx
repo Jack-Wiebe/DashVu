@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useEffect, useState } from "react";
 import * as Progress from "@radix-ui/react-progress";
 import { useSession } from "next-auth/react";
@@ -12,12 +14,13 @@ import {
 
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import WidgetProps from "@/types/widget";
+import type { WidgetComponentProps } from "@/types/widget";
 import { Button } from "../ui/Button";
-import { spotifyApi } from "../../lib/spotify";
+import { getSpotifyClient } from "../../lib/spotify-client";
 
-const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
+const SpotifyWidget: React.FC<WidgetComponentProps> = ({ className }) => {
   const { data: session, status: status } = useSession();
+  const spotifyApi = getSpotifyClient(session?.user.accessToken);
   let [isPlaying, setIsPlaying] = useState<boolean>();
   let [trackData, setTrackData] = useState<any>();
   let [playlistData, setPlaylistData] = useState<any>();
@@ -28,8 +31,6 @@ const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
   let progressCB: NodeJS.Timeout;
 
   useEffect(() => {
-    console.log("User Session:", session);
-
     if (status === "loading") {
       toast({
         title: "Loading Track Data",
@@ -38,10 +39,9 @@ const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
     }
 
     if (session?.user.accessToken) {
-      spotifyApi.setAccessToken(session?.user.accessToken);
       toast({
         title: "Token Granted",
-        description: session.user.accessToken,
+        description: "Spotify access granted",
       });
       spotifyApi.getMyCurrentPlaybackState().then((res) => {
         console.log("Initial Playback State:", res);
@@ -271,7 +271,6 @@ const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
   };
 
   const debug = () => {
-    console.log(session);
     if (session?.user.accessToken && session?.user.refreshToken) {
       spotifyApi.setAccessToken(session?.user.accessToken);
       spotifyApi.getMe().then((res) => {
@@ -286,7 +285,7 @@ const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
 
       toast({
         title: "Session Info",
-        description: session?.user.refreshToken,
+        description: "Spotify session is active",
       });
     } else {
       toast({
@@ -311,13 +310,18 @@ const SpotifyWidget: React.FC<WidgetProps> = ({ props, className }) => {
           <img
             className="flex-1 h-10 w-10 max-w-10"
             src={session?.user.image!}
+            alt={session?.user.name ?? "User avatar"}
           />
           <div className="flex-1">{session?.user.name}</div>
           <div>{playlistData?.name}</div>
         </div>
 
         <div id="Album Cover" className="flex justify-center row-span-2">
-          <img className="w-40" src={trackData?.album?.images[1]?.url} />
+          <img
+            className="w-40"
+            src={trackData?.album?.images[1]?.url}
+            alt={trackData?.album?.name ?? "Album cover"}
+          />
         </div>
 
         <div

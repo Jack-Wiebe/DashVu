@@ -29,7 +29,7 @@ export default async function RootLayout({
         <SessionProvider session={session}>
           <NavBar></NavBar>
 
-          <div className="container max-w-screen-2xl h-full pt-12">
+          <div className="container max-w-screen-2xl h-full">
             {children}
           </div>
 

@@ -1,38 +1,37 @@
-"use client";
-
 import { Icons } from "@/components/Icons";
-import MaxWidthWrapper from "@/components/MaxWidthWrapper";
-import { useSession } from "next-auth/react";
-import WidgetProps from "@/types/widget";
 import Widget from "@/components/Widget";
 import SpotifyWidget from "@/components/widgets/SpotifyWidget";
 import GalleryWidget from "@/components/widgets/GalleryWidget";
 import CalendarWidget from "@/components/widgets/CalendarWidget";
+import type { WidgetConfig } from "@/types/widget";
 
-export default function Home() {
-  const { data: session, status: test } = useSession();
-
-  const props1: WidgetProps = {
-    size: "text-red",
+const widgets: WidgetConfig[] = [
+  {
     Icon: Icons.spotify,
     Type: SpotifyWidget,
-  };
-  const props2: WidgetProps = {
-    size: "text-red",
+    title: "Now Playing",
+    size: "lg:col-span-1",
+  },
+  {
     Icon: Icons.gallery,
     Type: GalleryWidget,
-  };
-  const props3: WidgetProps = {
-    size: "text-red",
+    title: "Gallery",
+    size: "lg:col-span-1",
+  },
+  {
     Icon: Icons.calendar,
     Type: CalendarWidget,
-  };
+    title: "Calendar",
+    size: "lg:col-span-1",
+  },
+];
 
+export default function Home() {
   return (
-    <div className="text-slate-100 grid gap-8 lg:grid-cols-3 md:grid-cols-2 sml:grid-cols-1">
-      <Widget props={props1}></Widget>
-      <Widget props={props2}></Widget>
-      <Widget props={props3}></Widget>
+    <div className="grid grid-cols-1 gap-8 text-slate-100 md:grid-cols-2 lg:grid-cols-3">
+      {widgets.map((config, index) => (
+        <Widget key={index} config={config} />
+      ))}
     </div>
   );
 }

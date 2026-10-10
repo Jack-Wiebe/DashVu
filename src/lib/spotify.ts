@@ -1,3 +1,4 @@
+import "server-only";
 import SpotifyWebApi from "spotify-web-api-node";
 
 export const scopes = [
@@ -5,7 +6,6 @@ export const scopes = [
   "user-read-private",
   "playlist-read-collaborative",
   "streaming",
-  "user-read-private",
   "user-library-read",
   "user-top-read",
   // "user-library-modify",
@@ -25,6 +25,7 @@ const queryParamString = new URLSearchParams(params);
 const LOGIN_URL =
   "https://accounts.spotify.com/authorize?" + queryParamString.toString();
 
+// Server-only client. Never import this module from a Client Component.
 export const spotifyApi = new SpotifyWebApi({
   clientId: process.env.SPOTIFY_CLIENT_ID,
   clientSecret: process.env.SPOTIFY_CLIENT_SECRET,

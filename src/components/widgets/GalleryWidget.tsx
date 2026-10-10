@@ -1,10 +1,12 @@
+"use client";
+
 import React, { useRef, useEffect } from "react";
-import WidgetProps from "@/types/widget";
+import type { WidgetComponentProps } from "@/types/widget";
 import { Button } from "../ui/Button";
 import { Shuffle, ChevronRight, ChevronLeft } from "lucide-react";
 import { ImageFilter, filters } from "@/lib/filters";
 
-const GalleryWidget: React.FC<WidgetProps> = ({ props, className }) => {
+const GalleryWidget: React.FC<WidgetComponentProps> = ({ className }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   let context: CanvasRenderingContext2D | null | undefined = null;
   let image: HTMLImageElement;

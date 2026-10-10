@@ -1,20 +1,32 @@
 import React from "react";
-import WidgetProps from "@/types/widget";
 import { cn } from "@/lib/utils";
+import type { WidgetConfig } from "@/types/widget";
 
-const Widget: React.FC<WidgetProps> = ({ props }) => {
-  const size = props.size;
+const Widget: React.FC<{ config: WidgetConfig; className?: string }> = ({
+  config,
+  className,
+}) => {
+  const { Icon, Type, title, size } = config;
 
   return (
-    <props.Type
-      props={props}
+    <section
       className={cn(
+        "flex h-96 flex-col rounded-md border border-zinc-800 p-4",
         size,
-        "container p-4 rounded-md outline-dotted justify-center h-96"
+        className
       )}
     >
-      <props.Icon className="h-8 w-8 sm:h-6 sm:w-6"></props.Icon>
-    </props.Type>
+      {(Icon || title) && (
+        <header className="mb-3 flex items-center gap-2">
+          {Icon ? <Icon className="h-5 w-5" /> : null}
+          {title ? <h2 className="text-sm font-medium">{title}</h2> : null}
+        </header>
+      )}
+
+      <div className="min-h-0 flex-1">
+        <Type className="h-full" />
+      </div>
+    </section>
   );
 };
 

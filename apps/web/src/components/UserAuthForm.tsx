@@ -32,23 +32,6 @@ const UserAuthForm: FC<UserAuthFormProps> = ({ className, ...props }) => {
     }
   };
 
-  const loginWithSpotify = async () => {
-    setIsLoading(true);
-
-    try {
-      await signIn("spotify", { callbackUrl: "/" });
-    } catch (e) {
-      console.log(e);
-      toast({
-        title: "Spotify Authentication Failure",
-        description: "Could not sign in using Spotify",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   if (session) {
     return <div>Welcome back to DashVu</div>;
   } else {
@@ -56,11 +39,7 @@ const UserAuthForm: FC<UserAuthFormProps> = ({ className, ...props }) => {
       <div className={cn("flex w-full flex-col gap-2", className)} {...props}>
         <Button onClick={loginWithGoogle} isLoading={isLoading} size="sm" className="w-full">
           {isLoading ? null : <Icons.google className="h-4 w-4 mr-2"></Icons.google>}
-          Google
-        </Button>
-        <Button onClick={loginWithSpotify} isLoading={isLoading} size="sm" className="w-full">
-          {isLoading ? null : <Icons.spotify className="h-4 w-4 mr-2"></Icons.spotify>}
-          Spotify
+          Continue with Google
         </Button>
       </div>
     );

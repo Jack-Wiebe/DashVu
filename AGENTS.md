@@ -19,7 +19,8 @@ packages/
   ui/                  Shared presentational components        (placeholder)
   validators/          Shared zod schemas                      (placeholder)
   core/                Framework-agnostic pure business logic  (placeholder)
-  db/                  Neon + Drizzle data layer               (placeholder)
+  db/                  Neon + Drizzle schema + client
+  api/                 tRPC routers + server-side Spotify proxy
 ```
 
 ## Tech stack
@@ -28,9 +29,9 @@ packages/
 - **Language:** TypeScript (strict)
 - **Framework:** Next.js 14 App Router, React 18
 - **Styling:** Tailwind CSS + shadcn/ui (Radix primitives)
-- **Auth:** NextAuth v4 today, migrating to Auth.js v5 + Drizzle adapter
+- **Auth:** Auth.js v5 (`next-auth` beta) + `@auth/drizzle-adapter`, database sessions
 - **Database:** Neon (serverless Postgres) + Drizzle ORM
-- **Data fetching (planned):** tRPC + TanStack Query
+- **Data fetching:** tRPC v11 + TanStack Query v5
 - **Target:** Web/PWA only for now
 
 ## Commands (run from the repository root)
@@ -49,8 +50,10 @@ Run a single app with a filter, e.g. `pnpm --filter @dashvu/web dev`.
 ## Environment variables
 
 - Real values live in a **git-ignored `.env` at the repository root**. Copy `.env.example` to start.
-- Required: `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`,
-  `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`.
+- Required: `AUTH_URL`, `AUTH_SECRET`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`, `AUTH_SPOTIFY_ID`,
+  `AUTH_SPOTIFY_SECRET`. Optional: `DATABASE_URL` (Neon; required at runtime for auth).
+- Legacy names (`NEXTAUTH_*`, `GOOGLE_CLIENT_ID`, `SPOTIFY_CLIENT_ID`) still work as fallbacks in
+  `apps/web/src/env.ts` while you migrate your local `.env`.
 - `apps/web/next.config.js` loads the root `.env` explicitly (Next only reads env from the app dir).
 - Env is validated at runtime in `apps/web/src/env.ts` (`@t3-oss/env-nextjs` + `zod`).
 - **Local OAuth must use `http://127.0.0.1:3000`**, not `localhost` — Spotify rejects `http://localhost`
@@ -58,12 +61,12 @@ Run a single app with a filter, e.g. `pnpm --filter @dashvu/web dev`.
 
 ## Security rules (must follow)
 
-- Server-only modules **must** start with `import "server-only";` (e.g. `apps/web/src/lib/spotify.ts`).
+- Server-only modules **must** start with `import "server-only";` (e.g. `packages/api/src/spotify.ts`).
 - Never send secrets or OAuth refresh tokens to the client. Never use `NEXT_PUBLIC_*` for secrets.
 - Never commit `.env` or print token values in logs/toasts.
-- Spotify token refresh stays server-side. **Known issue:** the refresh token is currently copied into
-  the client session (`src/lib/auth.ts` `session` callback) — do not build new features on it; it will
-  be removed when auth moves to DB sessions.
+- Spotify tokens live in the `account` DB table. Refresh happens server-side in
+  `packages/api/src/spotify.ts`; the client session exposes only `id`, `name`, `email`, `image` and
+  `hasSpotify` (`apps/web/src/auth.ts`). Never add tokens to the session.
 
 ## Conventions
 
@@ -71,6 +74,20 @@ Run a single app with a filter, e.g. `pnpm --filter @dashvu/web dev`.
 - Client Components must declare `"use client"`.
 - New widgets follow the `WidgetConfig` contract in `apps/web/src/types/widget.ts` and render through
   `apps/web/src/components/Widget.tsx`.
+- Server data access goes through tRPC routers in `packages/api` (`appRouter`); the Next handler lives
+  at `apps/web/src/app/api/trpc/[trpc]/route.ts` and the client hooks in
+  `apps/web/src/lib/trpc/client.tsx`.
+- When overriding `authorization` on a provider whose default is a **string** (e.g. Spotify:
+  `authorization: "https://accounts.spotify.com/authorize?scope=..."`), you must re-specify `url`, or
+  Auth.js's deep-merge replaces the string with `{}` and drops the endpoint (causes `TypeError: Invalid URL`
+  in `getAuthorizationUrl`). Use `authorization: { url, params: { scope } }`.
+- `apps/web/src/app/api/auth/[...nextauth]/route.ts` is a **custom handler** — do not revert it to
+  `export const { GET, POST } = handlers`. Next normalizes `127.0.0.1`/`[::1]` → `localhost` inside
+  `NextRequest`/`NextURL`, which would make Auth.js emit `http://localhost:3000` redirect URIs
+  (unacceptable: Spotify only allows loopback IP literals). The route instead rebuilds the request from
+  `AUTH_URL` and calls `@auth/core`'s `Auth()` directly with the config exported from `src/auth.ts`.
+- Database changes: edit `packages/db/src/schema.ts`, then run `pnpm --filter @dashvu/db db:generate`
+  and commit the generated SQL in `packages/db/drizzle/`.
 - Put pure logic in `@dashvu/core` and shared validation in `@dashvu/validators` rather than duplicating
   it in `apps/web`.
 
@@ -87,9 +104,11 @@ add Vitest/Playwright with tests colocated next to source. When adding a test sc
 
 ## Known issues / TODO
 
-- Refresh token exposed in client session (see Security rules) — fix with DB sessions.
-- `spotify-web-api-node` (a Node SDK) is bundled into the client via the widget — replace with
-  `@spotify/web-api-ts-sdk` or route calls through the server.
+- ~~Refresh token exposed in client session~~ — resolved: DB sessions; session exposes no tokens.
+- ~~`spotify-web-api-node` bundled into the client~~ — resolved: Spotify calls now go through tRPC
+  (`packages/api`) and the SDK stays server-side.
+- `DATABASE_URL` must be present at runtime for auth; the app builds without it (placeholder
+  connection string + `force-dynamic` layout). Run `pnpm --filter @dashvu/db db:migrate` once configured.
 - `CalendarWidget` is an intentional placeholder.
 - Unused/deprecated calendar deps (`react-big-calendar`, `react-google-calendar-api`, `moment`).
 - `<img>` usage where `next/image` would be preferable; `apps/web/src/components/NavBar.tsx` has a

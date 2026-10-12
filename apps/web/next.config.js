@@ -10,7 +10,13 @@ loadEnvConfig(
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  transpilePackages: ["@dashvu/ui", "@dashvu/validators", "@dashvu/core"],
+  transpilePackages: [
+    "@dashvu/ui",
+    "@dashvu/validators",
+    "@dashvu/core",
+    "@dashvu/api",
+    "@dashvu/db",
+  ],
 };
 
 module.exports = nextConfig;

@@ -1,0 +1,48 @@
+{
+  "name": "@dashvu/web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@babel/runtime": "^7.24.6",
+    "@next/env": "14.0.4",
+    "@radix-ui/react-progress": "^1.0.3",
+    "@radix-ui/react-toast": "^1.1.5",
+    "@t3-oss/env-nextjs": "^0.11.1",
+    "@types/spotify-web-api-node": "^5.0.11",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.0",
+    "lucide-react": "^0.303.0",
+    "moment": "^2.30.1",
+    "next": "14.0.4",
+    "next-auth": "^4.24.5",
+    "react": "^18",
+    "react-big-calendar": "^1.12.2",
+    "react-dom": "^18",
+    "react-google-calendar-api": "^2.3.0",
+    "server-only": "^0.0.1",
+    "spotify-web-api-node": "^5.0.2",
+    "tailwind-merge": "^2.2.0",
+    "tailwindcss-animate": "^1.0.7",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@dashvu/config": "workspace:*",
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-big-calendar": "^1.8.9",
+    "@types/react-dom": "^18",
+    "autoprefixer": "^10.0.1",
+    "eslint": "^8",
+    "eslint-config-next": "14.0.4",
+    "postcss": "^8",
+    "tailwindcss": "^3.3.0",
+    "typescript": "^5"
+  }
+}

@@ -1,36 +1,50 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# DashVu
 
-## Getting Started
+A customizable personal dashboard. This repository is a **pnpm + Turborepo monorepo** containing the
+DashVu web application and its shared packages.
 
-First, run the development server:
+## Requirements
+
+- Node.js >= 20
+- pnpm >= 9 (via `corepack enable` recommended)
+
+## Getting started
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+cp .env.example .env   # then fill in the values
+pnpm dev               # http://127.0.0.1:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+See [`.env.example`](./.env.example) for the required environment variables. Local OAuth redirect URIs
+must use `http://127.0.0.1:3000` (Spotify rejects `http://localhost`).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Workspace layout
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+| Path                  | Description                             |
+| --------------------- | --------------------------------------- |
+| `apps/web`            | Next.js 14 (App Router) application     |
+| `packages/config`     | Shared tsconfig bases + Tailwind preset |
+| `packages/ui`         | Shared presentational components        |
+| `packages/validators` | Shared zod schemas                      |
+| `packages/core`       | Framework-agnostic pure logic           |
+| `packages/db`         | Neon + Drizzle data layer               |
 
-## Learn More
+## Scripts
 
-To learn more about Next.js, take a look at the following resources:
+| Command          | Description                     |
+| ---------------- | ------------------------------- |
+| `pnpm dev`       | Start `apps/web` in development |
+| `pnpm build`     | Build all packages (Turborepo)  |
+| `pnpm lint`      | Run ESLint across the workspace |
+| `pnpm typecheck` | Type-check across the workspace |
+| `pnpm format`    | Format with Prettier            |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Documentation
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+- [`AGENTS.md`](./AGENTS.md) — contributor and AI-agent guide (conventions, security rules, roadmap).
+- [`CLAUDE.md`](./CLAUDE.md) — quick reference for Claude Code.
 
-## Deploy on Vercel
+## License
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+See [LICENSE](./LICENSE).

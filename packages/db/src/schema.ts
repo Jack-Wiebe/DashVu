@@ -91,5 +91,6 @@ export const userPreferences = pgTable("userPreferences", {
     .primaryKey()
     .references(() => users.id, { onDelete: "cascade" }),
   theme: text("theme").notNull().default("dark"),
+  lastActiveDeviceId: text("lastActiveDeviceId"),
   updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
 });

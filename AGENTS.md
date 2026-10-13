@@ -9,11 +9,17 @@ The codebase is being rewritten from a single-app prototype into a **scalable CR
 a real database for user configuration**. Work proceeds in phases; keep the app runnable at the end
 of every change.
 
+## Git workflow (read first)
+
+- **Never run `git commit`, `git push`, `git amend`, or any other git-mutating command.** The
+  maintainer performs all git operations manually. Make and verify changes in the working tree, then
+  stop — do not stage, commit, or push.
+
 ## Monorepo layout
 
 ```
 apps/
-  web/                 Next.js 14 (App Router) application
+  web/                 Next.js 15 (App Router) application
 packages/
   config/              Shared tsconfig bases + Tailwind theme preset
   ui/                  Shared presentational components        (placeholder)
@@ -27,7 +33,7 @@ packages/
 
 - **Package manager:** pnpm · **Build orchestration:** Turborepo
 - **Language:** TypeScript (strict)
-- **Framework:** Next.js 14 App Router, React 18
+- **Framework:** Next.js 15 App Router, React 19
 - **Styling:** Tailwind CSS + shadcn/ui (Radix primitives)
 - **Auth:** Auth.js v5 (`next-auth` beta) + `@auth/drizzle-adapter`, database sessions
 - **Database:** Neon (serverless Postgres) + Drizzle ORM
@@ -40,7 +46,7 @@ packages/
 pnpm install        # install all workspace deps
 pnpm dev            # run apps/web in dev
 pnpm build          # build all packages via turbo
-pnpm lint           # eslint all packages
+pnpm lint           # eslint all packages (apps/web runs the ESLint CLI; `next lint` is gone in Next 15)
 pnpm typecheck      # tsc --noEmit all packages
 pnpm format         # prettier --write
 ```
@@ -56,6 +62,11 @@ Run a single app with a filter, e.g. `pnpm --filter @dashvu/web dev`.
   `apps/web/src/env.ts` while you migrate your local `.env`.
 - `apps/web/next.config.js` loads the root `.env` explicitly (Next only reads env from the app dir).
 - Env is validated at runtime in `apps/web/src/env.ts` (`@t3-oss/env-nextjs` + `zod`).
+- **Turborepo Strict Mode is the default (v2):** only env vars declared in `turbo.json` (`env`/
+  `globalEnv`) are passed to tasks in CI — undeclared vars are stripped. The app's vars (`AUTH_*`,
+  `NEXTAUTH_*`, `DATABASE_URL`, `GOOGLE_CLIENT_*`, `SPOTIFY_CLIENT_*`) are declared on the `build` and
+  `dev` tasks. Add any new required var there too, or CI's `pnpm build` will fail env validation at
+  page-data collection.
 - **Local OAuth must use `http://127.0.0.1:3000`**, not `localhost` — Spotify rejects `http://localhost`
   redirect URIs as insecure. Register `.../api/auth/callback/spotify` and `.../api/auth/callback/google`.
 
@@ -117,14 +128,12 @@ add Vitest/Playwright with tests colocated next to source. When adding a test sc
 
 ## Commits
 
-- Conventional Commits are enforced (commitlint + husky `commit-msg`).
+- **Never commit or push** (see Git workflow above) — the maintainer does all git operations manually.
+- Conventional Commits are enforced (commitlint + husky `commit-msg`); keep body lines ≤ 100 chars.
 - `pre-commit` runs lint-staged (Prettier on staged files).
 
 ## Known issues / TODO
 
-- ~~Refresh token exposed in client session~~ — resolved: DB sessions; session exposes no tokens.
-- ~~`spotify-web-api-node` bundled into the client~~ — resolved: Spotify calls now go through tRPC
-  (`packages/api`) and the SDK stays server-side.
 - `DATABASE_URL` must be present at runtime for auth; the app builds without it (placeholder
   connection string + `force-dynamic` layout). Run `pnpm --filter @dashvu/db db:migrate` once configured.
 - Google Calendar uses `react-big-calendar` (month/week/day) + `moment`; the widget fetches events via

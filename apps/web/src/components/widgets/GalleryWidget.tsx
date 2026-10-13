@@ -11,7 +11,7 @@ const GalleryWidget: React.FC<WidgetComponentProps> = ({ className }) => {
   const contextRef = useRef<CanvasRenderingContext2D | null>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
   const originalImageSrcRef = useRef<string>("");
-  const resizeTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const resizeTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const currentFilterRef = useRef<number>(0);
 
   useEffect(() => {

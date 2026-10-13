@@ -57,3 +57,82 @@
     @apply bg-background text-foreground;
   }
 }
+
+.dashvu-calendar {
+  --rbc-border: hsl(var(--border));
+  --rbc-muted: hsl(var(--muted-foreground));
+  color: hsl(var(--foreground));
+  font-size: 0.75rem;
+}
+
+.dashvu-calendar .rbc-calendar {
+  height: 100%;
+}
+
+.dashvu-calendar .rbc-month-view,
+.dashvu-calendar .rbc-time-view,
+.dashvu-calendar .rbc-agenda-view,
+.dashvu-calendar .rbc-header,
+.dashvu-calendar .rbc-month-row,
+.dashvu-calendar .rbc-day-bg,
+.dashvu-calendar .rbc-time-header,
+.dashvu-calendar .rbc-time-content,
+.dashvu-calendar .rbc-timeslot-group,
+.dashvu-calendar .rbc-time-slot,
+.dashvu-calendar .rbc-agenda-view table,
+.dashvu-calendar .rbc-agenda-view td,
+.dashvu-calendar .rbc-agenda-view th {
+  border-color: var(--rbc-border);
+}
+
+.dashvu-calendar .rbc-header,
+.dashvu-calendar .rbc-header + .rbc-header {
+  border-color: var(--rbc-border);
+  padding: 4px 2px;
+}
+
+.dashvu-calendar .rbc-off-range-bg {
+  background: transparent;
+  opacity: 0.4;
+}
+
+.dashvu-calendar .rbc-today {
+  background: hsl(var(--accent));
+}
+
+.dashvu-calendar .rbc-date-cell,
+.dashvu-calendar .rbc-date-cell.rbc-now,
+.dashvu-calendar .rbc-label {
+  color: var(--rbc-muted);
+}
+
+.dashvu-calendar .rbc-show-more {
+  color: hsl(var(--primary));
+  background: transparent;
+}
+
+.dashvu-calendar .rbc-event {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border: none;
+  padding: 1px 4px;
+}
+
+.dashvu-calendar .rbc-event.rbc-selected {
+  background: hsl(var(--primary) / 0.8);
+}
+
+.dashvu-calendar .rbc-toolbar button {
+  color: hsl(var(--foreground));
+  border-color: var(--rbc-border);
+  background: transparent;
+}
+
+.dashvu-calendar .rbc-toolbar button:hover,
+.dashvu-calendar .rbc-toolbar button:active,
+.dashvu-calendar .rbc-toolbar button.rbc-active,
+.dashvu-calendar .rbc-toolbar button.rbc-active:hover {
+  background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+  box-shadow: none;
+}

@@ -8,22 +8,20 @@ import { ImageFilter, filters } from "@/lib/filters";
 
 const GalleryWidget: React.FC<WidgetComponentProps> = ({ className }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  let context: CanvasRenderingContext2D | null | undefined = null;
-  let image: HTMLImageElement;
-  let originalImageSrc: string = "";
-
-  let resizeTimeout: ReturnType<typeof setTimeout>;
-
-  let currentFilter: number = 0;
+  const contextRef = useRef<CanvasRenderingContext2D | null>(null);
+  const imageRef = useRef<HTMLImageElement | null>(null);
+  const originalImageSrcRef = useRef<string>("");
+  const resizeTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const currentFilterRef = useRef<number>(0);
 
   useEffect(() => {
-    context = canvasRef?.current?.getContext("2d");
-    if (context == null) throw new Error("Could not get context");
+    contextRef.current = canvasRef.current?.getContext("2d") ?? null;
+    if (contextRef.current == null) throw new Error("Could not get context");
 
     // image = generateImage();
     // requestImgFromAPI();
     (async () => {
-      image = generateImage();
+      imageRef.current = generateImage();
       await requestImgFromAPI();
     })();
     //initGallery().then(() => console.log("hello"));
@@ -34,8 +32,8 @@ const GalleryWidget: React.FC<WidgetComponentProps> = ({ className }) => {
     };
 
     const resizeListener = () => {
-      clearTimeout(resizeTimeout);
-      resizeTimeout = setTimeout(() => {
+      clearTimeout(resizeTimeoutRef.current);
+      resizeTimeoutRef.current = setTimeout(() => {
         requestResizeImage();
       }, 100);
     };
@@ -53,7 +51,7 @@ const GalleryWidget: React.FC<WidgetComponentProps> = ({ className }) => {
     img.crossOrigin = "Anonymous";
 
     img.onload = () => {
-      loadImage(context!);
+      loadImage(contextRef.current);
     };
 
     return img;
@@ -63,56 +61,65 @@ const GalleryWidget: React.FC<WidgetComponentProps> = ({ className }) => {
   const requestImgFromAPI = async () => {
     const api: RequestInfo =
       "https://picsum.photos/" +
-      canvasRef?.current?.width +
+      canvasRef.current?.width +
       "/" +
-      canvasRef?.current?.height +
+      canvasRef.current?.height +
       "?random=2";
     const request = new Request(api);
     await fetch(request)
       .then((response) => response.blob())
       .then((blob) => {
-        image.src = URL.createObjectURL(blob);
-        originalImageSrc = image.src;
+        if (!imageRef.current) return;
+        imageRef.current.src = URL.createObjectURL(blob);
+        originalImageSrcRef.current = imageRef.current.src;
         //console.log(originalImageSrc);
       });
   };
 
   const resetImageSource = () => {
-    image.src = originalImageSrc;
+    if (imageRef.current) imageRef.current.src = originalImageSrcRef.current;
   };
 
-  const loadImage = (context: CanvasRenderingContext2D | null | undefined) => {
+  const loadImage = (context: CanvasRenderingContext2D | null) => {
     //clear the canvas
-    context?.clearRect(0, 0, canvasRef?.current?.width!, canvasRef?.current?.height!);
+    context?.clearRect(0, 0, canvasRef.current?.width!, canvasRef.current?.height!);
 
     //draw the new image
-    context?.drawImage(image, 0, 0, canvasRef?.current?.width!, canvasRef?.current?.height!);
+    if (imageRef.current) {
+      context?.drawImage(
+        imageRef.current,
+        0,
+        0,
+        canvasRef.current?.width!,
+        canvasRef.current?.height!
+      );
+    }
 
     applyFilter();
   };
 
   const clearCanvas = () => {
-    context?.clearRect(0, 0, canvasRef?.current?.width!, canvasRef?.current?.height!);
+    contextRef.current?.clearRect(0, 0, canvasRef.current?.width!, canvasRef.current?.height!);
   };
 
   const applyFilter = () => {
     //get Image Data
-    let imageData: ImageData = context?.getImageData(
+    let imageData: ImageData = contextRef.current?.getImageData(
       0,
       0,
-      canvasRef?.current?.width!,
-      canvasRef?.current?.height!
+      canvasRef.current?.width!,
+      canvasRef.current?.height!
     )!;
 
     //apply filter to image data
-    const func = Object.keys(filters)[currentFilter];
+    const func = Object.keys(filters)[currentFilterRef.current];
     if (func) imageData = filters[func as keyof Record<string, ImageFilter>](imageData);
 
     //console.log(imageData);
 
     //redraw image
-    context?.clearRect(0, 0, canvasRef?.current?.width!, canvasRef?.current?.height!);
-    context?.putImageData(imageData, 0, 0);
+    contextRef.current?.clearRect(0, 0, canvasRef.current?.width!, canvasRef.current?.height!);
+    contextRef.current?.putImageData(imageData, 0, 0);
   };
 
   //
@@ -120,32 +127,33 @@ const GalleryWidget: React.FC<WidgetComponentProps> = ({ className }) => {
   //
 
   const shuffleImage = async () => {
-    context = canvasRef?.current?.getContext("2d");
+    contextRef.current = canvasRef.current?.getContext("2d") ?? null;
     clearCanvas();
-    image = generateImage();
+    imageRef.current = generateImage();
     await requestImgFromAPI();
   };
 
   const nextFilter = () => {
-    currentFilter = (currentFilter + 1) % Object.keys(filters).length;
+    currentFilterRef.current = (currentFilterRef.current + 1) % Object.keys(filters).length;
     //console.log("Filter number = ", currentFilter);
 
-    context = canvasRef?.current?.getContext("2d");
+    contextRef.current = canvasRef.current?.getContext("2d") ?? null;
 
     clearCanvas();
-    image = generateImage();
+    imageRef.current = generateImage();
     resetImageSource();
     applyFilter();
   };
 
   const previousFilter = () => {
-    currentFilter = (currentFilter + Object.keys(filters).length - 1) % Object.keys(filters).length;
+    currentFilterRef.current =
+      (currentFilterRef.current + Object.keys(filters).length - 1) % Object.keys(filters).length;
     //console.log("Filter number = ", currentFilter);
 
-    context = canvasRef?.current?.getContext("2d");
+    contextRef.current = canvasRef.current?.getContext("2d") ?? null;
 
     clearCanvas();
-    image = generateImage();
+    imageRef.current = generateImage();
     resetImageSource();
     applyFilter();
   };

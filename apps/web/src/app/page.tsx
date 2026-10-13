@@ -1,3 +1,6 @@
+import { redirect } from "next/navigation";
+
+import { auth } from "@/auth";
 import { Icons } from "@/components/Icons";
 import Widget from "@/components/Widget";
 import SpotifyWidget from "@/components/widgets/SpotifyWidget";
@@ -22,11 +25,14 @@ const widgets: WidgetConfig[] = [
     Icon: Icons.calendar,
     Type: CalendarWidget,
     title: "Calendar",
-    size: "lg:col-span-1",
+    size: "md:col-span-2 lg:col-span-2 h-[34rem]",
   },
 ];
 
-export default function Home() {
+export default async function Home() {
+  const session = await auth();
+  if (!session) redirect("/sign-in");
+
   return (
     <div className="grid grid-cols-1 gap-8 text-slate-100 md:grid-cols-2 lg:grid-cols-3">
       {widgets.map((config, index) => (

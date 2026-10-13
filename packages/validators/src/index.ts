@@ -18,3 +18,13 @@ export const widgetConfigSchema = z.object({
 });
 
 export type WidgetConfigInput = z.infer<typeof widgetConfigSchema>;
+
+export const calendarEventsInputSchema = z
+  .object({
+    timeMin: z.string().datetime().optional(),
+    timeMax: z.string().datetime().optional(),
+    maxResults: z.number().int().min(1).max(250).optional(),
+  })
+  .default({});
+
+export type CalendarEventsInput = z.infer<typeof calendarEventsInputSchema>;

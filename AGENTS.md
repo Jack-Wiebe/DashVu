@@ -20,7 +20,7 @@ packages/
   validators/          Shared zod schemas                      (placeholder)
   core/                Framework-agnostic pure business logic  (placeholder)
   db/                  Neon + Drizzle schema + client
-  api/                 tRPC routers + server-side Spotify proxy
+  api/                 tRPC routers + server-side Spotify/Google proxies
 ```
 
 ## Tech stack
@@ -67,6 +67,9 @@ Run a single app with a filter, e.g. `pnpm --filter @dashvu/web dev`.
 - Spotify tokens live in the `account` DB table. Refresh happens server-side in
   `packages/api/src/spotify.ts`; the client session exposes only `id`, `name`, `email`, `image` and
   `hasSpotify` (`apps/web/src/auth.ts`). Never add tokens to the session.
+- Google tokens also live in the `account` table. Google Calendar is accessed server-side via
+  `packages/api/src/google.ts` (server-only); the session additionally exposes `hasCalendar`, derived
+  from the stored Google account scope. Never send Google tokens to the client.
 
 ## Conventions
 
@@ -90,6 +93,9 @@ Run a single app with a filter, e.g. `pnpm --filter @dashvu/web dev`.
   and commit the generated SQL in `packages/db/drizzle/`.
 - Put pure logic in `@dashvu/core` and shared validation in `@dashvu/validators` rather than duplicating
   it in `apps/web`.
+- Auth.js does **not** refresh tokens/scope for an already-linked account on re-sign-in. To pick up new
+  scopes (e.g. Calendar), the `signIn` callback in `apps/web/src/auth.ts` upserts the Google account's
+  tokens/scope when the provider returns fresh credentials.
 
 ## Testing
 
@@ -109,10 +115,9 @@ add Vitest/Playwright with tests colocated next to source. When adding a test sc
   (`packages/api`) and the SDK stays server-side.
 - `DATABASE_URL` must be present at runtime for auth; the app builds without it (placeholder
   connection string + `force-dynamic` layout). Run `pnpm --filter @dashvu/db db:migrate` once configured.
-- `CalendarWidget` is an intentional placeholder.
-- Unused/deprecated calendar deps (`react-big-calendar`, `react-google-calendar-api`, `moment`).
-- `<img>` usage where `next/image` would be preferable; `apps/web/src/components/NavBar.tsx` has a
-  `mx-screen-2xl` typo.
+- Google Calendar uses `react-big-calendar` (month/week/day) + `moment`; the widget fetches events via
+  `calendar.getEvents` and shows a reconnect prompt when `hasCalendar` is false. Enabling the Google
+  Calendar API + consent-screen scope is a manual Cloud console step (see `.env.example`).
 
 <!-- BEGIN:turborepo-agent-rules -->
 

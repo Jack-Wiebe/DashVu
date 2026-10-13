@@ -5,6 +5,7 @@ declare module "next-auth" {
     user: {
       id: string;
       hasSpotify?: boolean;
+      hasCalendar?: boolean;
     } & DefaultSession["user"];
   }
 }

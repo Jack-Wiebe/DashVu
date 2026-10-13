@@ -1,4 +1,4 @@
-import { LucideProps, LayoutDashboard, Image, Music, Calendar } from "lucide-react";
+import { LucideProps, LayoutDashboard, Image as ImageIcon, Music, Calendar } from "lucide-react";
 
 export const Icons = {
   logo: (props: LucideProps) => <LayoutDashboard {...props} />,
@@ -23,7 +23,7 @@ export const Icons = {
       <path d="M1 1h22v22H1z" fill="none" />
     </svg>
   ),
-  gallery: (props: LucideProps) => <Image {...props} />,
+  gallery: (props: LucideProps) => <ImageIcon {...props} />,
   spotify: (props: LucideProps) => <Music {...props} />,
   calendar: (props: LucideProps) => <Calendar {...props} />,
 };

@@ -2,6 +2,7 @@
 
 import * as Progress from "@radix-ui/react-progress";
 import { ChevronFirst, ChevronLast, Pause, Play, Repeat2, Shuffle } from "lucide-react";
+import Image from "next/image";
 import { signIn, useSession } from "next-auth/react";
 
 import { trpc } from "@/lib/trpc/client";
@@ -52,17 +53,29 @@ const SpotifyWidget: React.FC<WidgetComponentProps> = ({ className }) => {
   return (
     <div className={cn(className, "grid items-center grid-cols-1 grid-rows-5 text-sm gap-8")}>
       <div id="User Info" className="flex gap-2 items-center h-10 overflow-clip">
-        <img
-          className="h-10 w-10 max-w-10"
-          src={session?.user.image ?? ""}
-          alt={session?.user.name ?? "User avatar"}
-        />
+        {session?.user.image ? (
+          <Image
+            className="h-10 w-10 max-w-10"
+            src={session.user.image}
+            alt={session.user.name ?? "User avatar"}
+            width={40}
+            height={40}
+          />
+        ) : (
+          <div className="h-10 w-10 max-w-10 rounded-full bg-zinc-800" />
+        )}
         <div className="flex-1">{session?.user.name}</div>
       </div>
 
       <div id="Album Cover" className="flex justify-center row-span-2">
         {albumImages[1]?.url ? (
-          <img className="w-40" src={albumImages[1].url} alt={track?.name ?? "Album cover"} />
+          <Image
+            className="w-40 h-auto"
+            src={albumImages[1].url}
+            alt={track?.name ?? "Album cover"}
+            width={160}
+            height={160}
+          />
         ) : (
           <div className="h-40 w-40 rounded bg-zinc-800" />
         )}

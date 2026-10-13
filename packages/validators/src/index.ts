@@ -11,13 +11,35 @@ export const widgetKindSchema = z.enum(["spotify", "gallery", "calendar"]);
 
 export type WidgetKind = z.infer<typeof widgetKindSchema>;
 
-export const widgetConfigSchema = z.object({
-  id: z.string(),
+export const widgetSizeSchema = z.enum(["sm", "md", "lrg"]);
+
+export type WidgetSize = z.infer<typeof widgetSizeSchema>;
+
+export const widgetLayoutItemSchema = z.object({
+  id: z.string().min(1),
   kind: widgetKindSchema,
   title: z.string().min(1),
+  size: widgetSizeSchema,
+  position: z.number().int().min(0),
+  settings: z.record(z.unknown()).nullish(),
 });
 
-export type WidgetConfigInput = z.infer<typeof widgetConfigSchema>;
+export type WidgetLayoutItem = z.infer<typeof widgetLayoutItemSchema>;
+
+export const saveLayoutSchema = z.object({
+  dashboardId: z.string().min(1),
+  widgets: z.array(widgetLayoutItemSchema),
+});
+
+export type SaveLayoutInput = z.infer<typeof saveLayoutSchema>;
+
+export const DEFAULT_WIDGET_LAYOUT: Array<
+  Pick<WidgetLayoutItem, "kind" | "title" | "size" | "position">
+> = [
+  { kind: "spotify", title: "Now Playing", size: "sm", position: 0 },
+  { kind: "gallery", title: "Gallery", size: "sm", position: 1 },
+  { kind: "calendar", title: "Calendar", size: "md", position: 2 },
+];
 
 export const calendarEventsInputSchema = z
   .object({

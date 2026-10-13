@@ -76,7 +76,19 @@ Run a single app with a filter, e.g. `pnpm --filter @dashvu/web dev`.
 - Do not add comments unless they add real value.
 - Client Components must declare `"use client"`.
 - New widgets follow the `WidgetConfig` contract in `apps/web/src/types/widget.ts` and render through
-  `apps/web/src/components/Widget.tsx`.
+  `apps/web/src/components/Widget.tsx`. Every widget **must** be registered in
+  `apps/web/src/lib/widget-registry.ts` (`WIDGET_REGISTRY`: kind → `{ Type, Icon, defaultTitle,
+defaultSize, sizes }`); `Widget.tsx` resolves the component/icon from there. The `kind` enum lives in
+  `@dashvu/validators` (`widgetKindSchema`). Widget `size` is a **token** (`sm|md|lrg`,
+  `widgetSizeSchema`), mapped to Tailwind classes in `WIDGET_SIZE_CLASSES` — never store raw Tailwind
+  class strings in the DB (Tailwind would purge them).
+- Dashboard layout is persisted per user: server components load it via
+  `createCaller(...).dashboard.getMine()` (`apps/web/src/app/page.tsx`), the client
+  (`apps/web/src/components/Dashboard.tsx`) edits it and auto-saves with
+  `dashboard.saveLayout`. `saveLayout` upserts by client-generated widget id scoped to the owner's
+  dashboard. `widget.settings` (jsonb) is reserved for future per-widget config.
+- The DB client uses `drizzle-orm/neon-http`, which **does not support `db.transaction`** — write
+  multi-step operations sequentially (see `packages/api/src/routers/dashboard.ts`).
 - Server data access goes through tRPC routers in `packages/api` (`appRouter`); the Next handler lives
   at `apps/web/src/app/api/trpc/[trpc]/route.ts` and the client hooks in
   `apps/web/src/lib/trpc/client.tsx`.
@@ -118,6 +130,11 @@ add Vitest/Playwright with tests colocated next to source. When adding a test sc
 - Google Calendar uses `react-big-calendar` (month/week/day) + `moment`; the widget fetches events via
   `calendar.getEvents` and shows a reconnect prompt when `hasCalendar` is false. Enabling the Google
   Calendar API + consent-screen scope is a manual Cloud console step (see `.env.example`).
+- Phase 4 (in progress): user config now persists (`dashboard`/`widget`). Stage 1 shipped the widget
+  registry, `dashboard.getMine`/`saveLayout`, and an edit mode with add/remove/reorder + optimistic
+  auto-save. Stage 2 replaced reorder buttons with drag-and-drop via `@dnd-kit` (sortable,
+  `rectSortingStrategy`, handle-only drag + kept up/down buttons as fallback). Still TODO:
+  export/import layout, per-widget settings panels.
 
 <!-- BEGIN:turborepo-agent-rules -->
 

@@ -1,0 +1,1 @@
+UPDATE "widget" SET "size" = 'lrg' WHERE "size" = 'wide';

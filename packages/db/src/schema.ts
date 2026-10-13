@@ -64,6 +64,7 @@ export const dashboards = pgTable("dashboard", {
     .$defaultFn(() => crypto.randomUUID()),
   userId: text("userId")
     .notNull()
+    .unique()
     .references(() => users.id, { onDelete: "cascade" }),
   name: text("name").notNull().default("My Dashboard"),
   createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),

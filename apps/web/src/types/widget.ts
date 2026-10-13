@@ -1,15 +1,28 @@
 import type { ComponentType } from "react";
 import type { LucideProps } from "lucide-react";
 
+import type { WidgetKind, WidgetSize } from "@dashvu/validators";
+
 export interface WidgetComponentProps {
   className?: string;
+  settings?: Record<string, unknown> | null;
 }
 
 export interface WidgetConfig {
-  Icon?: ComponentType<LucideProps>;
+  id: string;
+  kind: WidgetKind;
+  title: string;
+  size: WidgetSize;
+  settings: Record<string, unknown> | null;
+}
+
+export interface WidgetDefinition {
+  kind: WidgetKind;
   Type: ComponentType<WidgetComponentProps>;
-  title?: string;
-  size?: string;
+  Icon?: ComponentType<LucideProps>;
+  defaultTitle: string;
+  defaultSize: WidgetSize;
+  sizes: WidgetSize[];
 }
 
 export default WidgetConfig;

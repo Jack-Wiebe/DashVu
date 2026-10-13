@@ -1,0 +1,1 @@
+ALTER TABLE "dashboard" ADD CONSTRAINT "dashboard_userId_unique" UNIQUE("userId");

@@ -88,7 +88,11 @@
 .dashvu-calendar .rbc-header,
 .dashvu-calendar .rbc-header + .rbc-header {
   border-color: var(--rbc-border);
-  padding: 4px 2px;
+  padding: 2px;
+}
+
+.dashvu-calendar .rbc-month-row {
+  min-height: 0;
 }
 
 .dashvu-calendar .rbc-off-range-bg {
@@ -104,11 +108,14 @@
 .dashvu-calendar .rbc-date-cell.rbc-now,
 .dashvu-calendar .rbc-label {
   color: var(--rbc-muted);
+  padding: 2px 3px;
 }
 
 .dashvu-calendar .rbc-show-more {
   color: hsl(var(--primary));
   background: transparent;
+  display: inline-block;
+  padding: 0 3px;
 }
 
 .dashvu-calendar .rbc-event {
@@ -118,14 +125,35 @@
   padding: 1px 4px;
 }
 
+.dashvu-calendar .rbc-month-view .rbc-event {
+  font-size: 0.7rem;
+  line-height: 1.25;
+}
+
 .dashvu-calendar .rbc-event.rbc-selected {
   background: hsl(var(--primary) / 0.8);
+}
+
+.dashvu-calendar .rbc-toolbar {
+  flex-wrap: nowrap;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  margin-bottom: 6px;
 }
 
 .dashvu-calendar .rbc-toolbar button {
   color: hsl(var(--foreground));
   border-color: var(--rbc-border);
   background: transparent;
+  padding: 3px 8px;
+  font-size: 0.75rem;
+}
+
+.dashvu-calendar .rbc-toolbar-label {
+  padding: 0 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .dashvu-calendar .rbc-toolbar button:hover,

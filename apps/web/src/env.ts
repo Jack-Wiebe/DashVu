@@ -10,6 +10,7 @@ export const env = createEnv({
     AUTH_SPOTIFY_ID: z.string().min(1),
     AUTH_SPOTIFY_SECRET: z.string().min(1),
     DATABASE_URL: z.string().url().optional(),
+    DASHVU_USER_AGENT: z.string().min(1).optional(),
   },
   client: {},
   runtimeEnv: {
@@ -20,6 +21,7 @@ export const env = createEnv({
     AUTH_SPOTIFY_ID: process.env.AUTH_SPOTIFY_ID ?? process.env.SPOTIFY_CLIENT_ID,
     AUTH_SPOTIFY_SECRET: process.env.AUTH_SPOTIFY_SECRET ?? process.env.SPOTIFY_CLIENT_SECRET,
     DATABASE_URL: process.env.DATABASE_URL,
+    DASHVU_USER_AGENT: process.env.DASHVU_USER_AGENT,
   },
   emptyStringAsUndefined: true,
 });

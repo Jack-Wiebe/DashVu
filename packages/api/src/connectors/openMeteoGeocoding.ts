@@ -2,6 +2,7 @@ import "server-only";
 import type { Connector, ConnectorDefinition, RatePolicy } from "@dashvu/core";
 
 import { fetchCached } from "../cache";
+import { fetchWithRetry } from "../http";
 import { rateLimit } from "../ratelimit";
 
 export interface GeocodeRequest {
@@ -41,7 +42,7 @@ export const openMeteoGeocodingConnector: Connector<GeocodeRequest, GeocodeResul
       url.searchParams.set("language", "en");
       url.searchParams.set("format", "json");
 
-      const response = await fetch(url);
+      const response = await fetchWithRetry(url);
       if (!response.ok) {
         throw new Error(`Open-Meteo geocoding failed (${response.status})`);
       }

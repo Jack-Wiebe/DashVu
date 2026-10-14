@@ -57,16 +57,17 @@ Run a single app with a filter, e.g. `pnpm --filter @dashvu/web dev`.
 
 - Real values live in a **git-ignored `.env` at the repository root**. Copy `.env.example` to start.
 - Required: `AUTH_URL`, `AUTH_SECRET`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`, `AUTH_SPOTIFY_ID`,
-  `AUTH_SPOTIFY_SECRET`. Optional: `DATABASE_URL` (Neon; required at runtime for auth).
+  `AUTH_SPOTIFY_SECRET`. Optional: `DATABASE_URL` (Neon; required at runtime for auth),
+  `DASHVU_USER_AGENT` (outbound `User-Agent` for third-party APIs — see `packages/api/src/http.ts`).
 - Legacy names (`NEXTAUTH_*`, `GOOGLE_CLIENT_ID`, `SPOTIFY_CLIENT_ID`) still work as fallbacks in
   `apps/web/src/env.ts` while you migrate your local `.env`.
 - `apps/web/next.config.js` loads the root `.env` explicitly (Next only reads env from the app dir).
 - Env is validated at runtime in `apps/web/src/env.ts` (`@t3-oss/env-nextjs` + `zod`).
 - **Turborepo Strict Mode is the default (v2):** only env vars declared in `turbo.json` (`env`/
   `globalEnv`) are passed to tasks in CI — undeclared vars are stripped. The app's vars (`AUTH_*`,
-  `NEXTAUTH_*`, `DATABASE_URL`, `GOOGLE_CLIENT_*`, `SPOTIFY_CLIENT_*`) are declared on the `build` and
-  `dev` tasks. Add any new required var there too, or CI's `pnpm build` will fail env validation at
-  page-data collection.
+  `NEXTAUTH_*`, `DATABASE_URL`, `GOOGLE_CLIENT_*`, `SPOTIFY_CLIENT_*`, `DASHVU_USER_AGENT`) are declared
+  on the `build` and `dev` tasks. Add any new required var there too, or CI's `pnpm build` will fail env
+  validation at page-data collection.
 - **Local OAuth must use `http://127.0.0.1:3000`**, not `localhost` — Spotify rejects `http://localhost`
   redirect URIs as insecure. Register `.../api/auth/callback/spotify` and `.../api/auth/callback/google`.
 

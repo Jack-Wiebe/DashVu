@@ -2,6 +2,7 @@ import "server-only";
 import type { Connector, ConnectorDefinition, RatePolicy } from "@dashvu/core";
 
 import { fetchCached } from "../cache";
+import { fetchWithRetry } from "../http";
 import { rateLimit } from "../ratelimit";
 
 export interface OpenMeteoRequest {
@@ -94,7 +95,7 @@ export const openMeteoConnector: Connector<OpenMeteoRequest, OpenMeteoResponse> 
       url.searchParams.set("forecast_days", "7");
       url.searchParams.set("timezone", "auto");
 
-      const response = await fetch(url);
+      const response = await fetchWithRetry(url);
       if (!response.ok) {
         throw new Error(`Open-Meteo request failed (${response.status})`);
       }

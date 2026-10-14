@@ -2,6 +2,7 @@ import type { WidgetKind, WidgetSize } from "@dashvu/validators";
 
 import { Icons } from "@/components/Icons";
 import CalendarWidget from "@/components/widgets/CalendarWidget";
+import FunPackWidget from "@/components/widgets/FunPackWidget";
 import GalleryWidget from "@/components/widgets/GalleryWidget";
 import SpotifyWidget from "@/components/widgets/SpotifyWidget";
 import WeatherWidget from "@/components/widgets/WeatherWidget";
@@ -37,6 +38,14 @@ export const WIDGET_REGISTRY: Record<WidgetKind, WidgetDefinition> = {
     Type: WeatherWidget,
     Icon: Icons.weather,
     defaultTitle: "Weather",
+    defaultSize: "md",
+    sizes: ["sm", "md", "lrg"],
+  },
+  funPack: {
+    kind: "funPack",
+    Type: FunPackWidget,
+    Icon: Icons.funPack,
+    defaultTitle: "Daily Fun Pack",
     defaultSize: "md",
     sizes: ["sm", "md", "lrg"],
   },

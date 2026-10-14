@@ -2,6 +2,7 @@ import "server-only";
 import type { Connector, ConnectorDefinition, RatePolicy } from "@dashvu/core";
 
 import { fetchCached } from "../cache";
+import { fetchWithRetry } from "../http";
 import { rateLimit } from "../ratelimit";
 
 export interface RadarFrame {
@@ -40,7 +41,7 @@ export const rainViewerConnector: Connector<void, RainViewerResponse> = {
     rateLimit(policy, "rainViewer");
 
     return fetchCached("rainViewer:meta", definition.cacheTtlMs, async () => {
-      const response = await fetch("https://api.rainviewer.com/public/weather-maps.json");
+      const response = await fetchWithRetry("https://api.rainviewer.com/public/weather-maps.json");
       if (!response.ok) {
         throw new Error(`RainViewer request failed (${response.status})`);
       }

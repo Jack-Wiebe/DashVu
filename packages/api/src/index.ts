@@ -1,5 +1,6 @@
 import { calendarRouter } from "./routers/calendar";
 import { dashboardRouter } from "./routers/dashboard";
+import { funPackRouter } from "./routers/funPack";
 import { spotifyRouter } from "./routers/spotify";
 import { userRouter } from "./routers/user";
 import { weatherRouter } from "./routers/weather";
@@ -9,6 +10,7 @@ export const appRouter = router({
   spotify: spotifyRouter,
   calendar: calendarRouter,
   weather: weatherRouter,
+  funPack: funPackRouter,
   dashboard: dashboardRouter,
   user: userRouter,
 });

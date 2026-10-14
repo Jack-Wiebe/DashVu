@@ -11,6 +11,10 @@ export const connectorIdSchema = z.enum([
   "openMeteo",
   "openMeteoGeocoding",
   "rainViewer",
+  "zenQuotes",
+  "icanhazdadjoke",
+  "uselessFacts",
+  "wikimediaOnThisDay",
 ]);
 
 export type ConnectorId = z.infer<typeof connectorIdSchema>;

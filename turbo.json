@@ -12,7 +12,8 @@
         "GOOGLE_CLIENT_ID",
         "GOOGLE_CLIENT_SECRET",
         "SPOTIFY_CLIENT_ID",
-        "SPOTIFY_CLIENT_SECRET"
+        "SPOTIFY_CLIENT_SECRET",
+        "DASHVU_USER_AGENT"
       ]
     },
     "lint": {
@@ -31,7 +32,8 @@
         "GOOGLE_CLIENT_ID",
         "GOOGLE_CLIENT_SECRET",
         "SPOTIFY_CLIENT_ID",
-        "SPOTIFY_CLIENT_SECRET"
+        "SPOTIFY_CLIENT_SECRET",
+        "DASHVU_USER_AGENT"
       ]
     }
   }

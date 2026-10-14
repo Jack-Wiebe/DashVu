@@ -6,6 +6,7 @@ import {
   Calendar,
   CloudSun,
   Sparkles,
+  ListChecks,
 } from "lucide-react";
 
 export const Icons = {
@@ -36,4 +37,5 @@ export const Icons = {
   calendar: (props: LucideProps) => <Calendar {...props} />,
   weather: (props: LucideProps) => <CloudSun {...props} />,
   funPack: (props: LucideProps) => <Sparkles {...props} />,
+  planner: (props: LucideProps) => <ListChecks {...props} />,
 };

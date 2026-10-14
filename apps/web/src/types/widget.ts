@@ -4,6 +4,7 @@ import type { LucideProps } from "lucide-react";
 import type { WidgetKind, WidgetSize } from "@dashvu/validators";
 
 export interface WidgetComponentProps {
+  widgetId: string;
   className?: string;
   settings?: Record<string, unknown> | null;
   onSettingsChange?: (settings: Record<string, unknown>) => void;

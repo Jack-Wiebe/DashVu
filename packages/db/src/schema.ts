@@ -1,5 +1,14 @@
 import type { AdapterAccountType } from "@auth/core/adapters";
-import { integer, jsonb, pgTable, primaryKey, text, timestamp } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+} from "drizzle-orm/pg-core";
 
 /**
  * Auth.js core tables. Column names match what `@auth/drizzle-adapter`
@@ -94,3 +103,27 @@ export const userPreferences = pgTable("userPreferences", {
   lastActiveDeviceId: text("lastActiveDeviceId"),
   updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
 });
+
+/**
+ * Generic per-widget content items (e.g. the planner widget's notes, todos,
+ * and countdowns). `mode` separates the item lists within a single widget.
+ */
+export const widgetItems = pgTable(
+  "widgetItem",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    widgetId: text("widgetId")
+      .notNull()
+      .references(() => widgets.id, { onDelete: "cascade" }),
+    mode: text("mode").notNull(),
+    position: integer("position").notNull().default(0),
+    text: text("text").notNull(),
+    checked: boolean("checked").notNull().default(false),
+    date: timestamp("date", { mode: "date" }),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (item) => [index("widgetItem_widgetId_mode_idx").on(item.widgetId, item.mode)]
+);

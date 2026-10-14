@@ -8,8 +8,16 @@ import { z } from "zod";
  */
 
 export * from "./connector";
+export * from "./planner";
 
-export const widgetKindSchema = z.enum(["spotify", "gallery", "calendar", "weather", "funPack"]);
+export const widgetKindSchema = z.enum([
+  "spotify",
+  "gallery",
+  "calendar",
+  "weather",
+  "funPack",
+  "planner",
+]);
 
 export type WidgetKind = z.infer<typeof widgetKindSchema>;
 

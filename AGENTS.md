@@ -99,6 +99,11 @@ defaultSize, sizes }`); `Widget.tsx` resolves the component/icon from there. The
   (`apps/web/src/components/Dashboard.tsx`) edits it and auto-saves with
   `dashboard.saveLayout`. `saveLayout` upserts by client-generated widget id scoped to the owner's
   dashboard. `widget.settings` (jsonb) is reserved for future per-widget config.
+- Widgets that own **content** (not just config) get a dedicated table keyed to `widget.id` with
+  `ON DELETE CASCADE`; the `planner` widget uses `widgetItem` + the `planner` router. Widget components
+  receive `widgetId` via `WidgetComponentProps` and call tRPC directly — every such procedure must
+  verify ownership by joining the row back to `dashboard.userId`. Return dates as ISO strings (no
+  superjson transformer) and keep multi-step writes sequential.
 - The DB client uses `drizzle-orm/neon-http`, which **does not support `db.transaction`** — write
   multi-step operations sequentially (see `packages/api/src/routers/dashboard.ts`).
 - Server data access goes through tRPC routers in `packages/api` (`appRouter`); the Next handler lives

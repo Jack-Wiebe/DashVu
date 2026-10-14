@@ -29,6 +29,13 @@
       "when": 1791860627208,
       "tag": "0003_big_colonel_america",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791947690957,
+      "tag": "0004_sudden_centennial",
+      "breakpoints": true
     }
   ]
 }

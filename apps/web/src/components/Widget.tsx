@@ -46,7 +46,12 @@ const Widget: React.FC<{
       </header>
 
       <div className="min-h-0 flex-1">
-        <Type className="h-full" settings={config.settings} onSettingsChange={onSettingsChange} />
+        <Type
+          widgetId={config.id}
+          className="h-full"
+          settings={config.settings}
+          onSettingsChange={onSettingsChange}
+        />
       </div>
     </section>
   );

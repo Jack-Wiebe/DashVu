@@ -4,6 +4,7 @@ import { Icons } from "@/components/Icons";
 import CalendarWidget from "@/components/widgets/CalendarWidget";
 import FunPackWidget from "@/components/widgets/FunPackWidget";
 import GalleryWidget from "@/components/widgets/GalleryWidget";
+import PlannerWidget from "@/components/widgets/PlannerWidget";
 import SpotifyWidget from "@/components/widgets/SpotifyWidget";
 import WeatherWidget from "@/components/widgets/WeatherWidget";
 import type { WidgetConfig, WidgetDefinition } from "@/types/widget";
@@ -46,6 +47,14 @@ export const WIDGET_REGISTRY: Record<WidgetKind, WidgetDefinition> = {
     Type: FunPackWidget,
     Icon: Icons.funPack,
     defaultTitle: "Daily Fun Pack",
+    defaultSize: "md",
+    sizes: ["sm", "md", "lrg"],
+  },
+  planner: {
+    kind: "planner",
+    Type: PlannerWidget,
+    Icon: Icons.planner,
+    defaultTitle: "Planner",
     defaultSize: "md",
     sizes: ["sm", "md", "lrg"],
   },

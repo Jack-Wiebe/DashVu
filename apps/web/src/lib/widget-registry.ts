@@ -3,6 +3,7 @@ import type { WidgetKind, WidgetSize } from "@dashvu/validators";
 import { Icons } from "@/components/Icons";
 import CalendarWidget from "@/components/widgets/CalendarWidget";
 import FunPackWidget from "@/components/widgets/FunPackWidget";
+import GenerativeArtWidget from "@/components/widgets/GenerativeArtWidget";
 import GalleryWidget from "@/components/widgets/GalleryWidget";
 import PlannerWidget from "@/components/widgets/PlannerWidget";
 import SpotifyWidget from "@/components/widgets/SpotifyWidget";
@@ -55,6 +56,14 @@ export const WIDGET_REGISTRY: Record<WidgetKind, WidgetDefinition> = {
     Type: PlannerWidget,
     Icon: Icons.planner,
     defaultTitle: "Planner",
+    defaultSize: "md",
+    sizes: ["sm", "md", "lrg"],
+  },
+  canvas: {
+    kind: "canvas",
+    Type: GenerativeArtWidget,
+    Icon: Icons.canvas,
+    defaultTitle: "Generative Art",
     defaultSize: "md",
     sizes: ["sm", "md", "lrg"],
   },

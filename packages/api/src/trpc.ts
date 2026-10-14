@@ -21,8 +21,6 @@ const entitlementsMiddleware = t.middleware(({ ctx, next }) =>
   next({ ctx: { entitlements: ctx.entitlements } })
 );
 
-const rateLimitMiddleware = t.middleware(({ next }) => next());
-
 const authMiddleware = t.middleware(({ ctx, next }) => {
   if (!ctx.session?.user?.id) {
     throw new TRPCError({ code: "UNAUTHORIZED" });
@@ -35,5 +33,4 @@ export const publicProcedure = t.procedure.use(loggingMiddleware);
 export const protectedProcedure = t.procedure
   .use(loggingMiddleware)
   .use(entitlementsMiddleware)
-  .use(rateLimitMiddleware)
   .use(authMiddleware);

@@ -1,5 +1,5 @@
 import "server-only";
-import type { Connector, ConnectorDefinition } from "@dashvu/core";
+import type { Connector, ConnectorDefinition, RatePolicy } from "@dashvu/core";
 
 import { fetchCached } from "../cache";
 import { rateLimit } from "../ratelimit";
@@ -15,12 +15,14 @@ export interface RainViewerResponse {
   updatedAt: number;
 }
 
+const policy: RatePolicy = { points: 60, windowMs: 60 * 1000 };
+
 const definition: ConnectorDefinition = {
   id: "rainViewer",
   authKind: "keyless",
   capabilities: ["radar"],
   cacheTtlMs: 3 * 60 * 1000,
-  ratePolicy: { points: 60, windowMs: 60 * 1000, scope: "provider" },
+  ratePolicy: policy,
 };
 
 interface RainViewerPayload {
@@ -35,7 +37,7 @@ interface RainViewerPayload {
 export const rainViewerConnector: Connector<void, RainViewerResponse> = {
   definition,
   async invoke() {
-    rateLimit(definition.ratePolicy, "rainViewer");
+    rateLimit(policy, "rainViewer");
 
     return fetchCached("rainViewer:meta", definition.cacheTtlMs, async () => {
       const response = await fetch("https://api.rainviewer.com/public/weather-maps.json");

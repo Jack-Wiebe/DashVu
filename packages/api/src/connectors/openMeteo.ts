@@ -1,5 +1,5 @@
 import "server-only";
-import type { Connector, ConnectorDefinition } from "@dashvu/core";
+import type { Connector, ConnectorDefinition, RatePolicy } from "@dashvu/core";
 
 import { fetchCached } from "../cache";
 import { rateLimit } from "../ratelimit";
@@ -32,12 +32,14 @@ export interface OpenMeteoResponse {
   daily: DailyForecast[];
 }
 
+const policy: RatePolicy = { points: 60, windowMs: 60 * 1000 };
+
 const definition: ConnectorDefinition = {
   id: "openMeteo",
   authKind: "keyless",
   capabilities: ["currentWeather", "dailyForecast"],
   cacheTtlMs: 10 * 60 * 1000,
-  ratePolicy: { points: 60, windowMs: 60 * 1000, scope: "provider" },
+  ratePolicy: policy,
 };
 
 interface OpenMeteoPayload {
@@ -78,7 +80,7 @@ function toDailyForecast(payload: OpenMeteoPayload): DailyForecast[] {
 export const openMeteoConnector: Connector<OpenMeteoRequest, OpenMeteoResponse> = {
   definition,
   async invoke(_userId, { latitude, longitude }) {
-    rateLimit(definition.ratePolicy, "openMeteo");
+    rateLimit(policy, "openMeteo");
 
     return fetchCached(cacheKey(latitude, longitude), definition.cacheTtlMs, async () => {
       const url = new URL("https://api.open-meteo.com/v1/forecast");

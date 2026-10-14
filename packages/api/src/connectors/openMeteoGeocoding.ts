@@ -1,5 +1,5 @@
 import "server-only";
-import type { Connector, ConnectorDefinition } from "@dashvu/core";
+import type { Connector, ConnectorDefinition, RatePolicy } from "@dashvu/core";
 
 import { fetchCached } from "../cache";
 import { rateLimit } from "../ratelimit";
@@ -17,18 +17,20 @@ export interface GeocodeResult {
   longitude: number;
 }
 
+const policy: RatePolicy = { points: 60, windowMs: 60 * 1000 };
+
 const definition: ConnectorDefinition = {
   id: "openMeteoGeocoding",
   authKind: "keyless",
   capabilities: ["geocode"],
   cacheTtlMs: 24 * 60 * 60 * 1000,
-  ratePolicy: { points: 60, windowMs: 60 * 1000, scope: "provider" },
+  ratePolicy: policy,
 };
 
 export const openMeteoGeocodingConnector: Connector<GeocodeRequest, GeocodeResult[]> = {
   definition,
   async invoke(_userId, { query }) {
-    rateLimit(definition.ratePolicy, "openMeteoGeocoding");
+    rateLimit(policy, "openMeteoGeocoding");
 
     const normalized = query.trim().toLowerCase();
 

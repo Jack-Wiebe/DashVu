@@ -20,9 +20,6 @@ export type AppRouter = typeof appRouter;
 export { createContext } from "./context";
 export type { Context, ContextInput, SessionUser } from "./context";
 
-export { getAuthedClient } from "./credentials";
-export type { AuthedClient } from "./credentials";
-
 export { CONNECTORS, getConnector } from "./connectors/registry";
 
 export { fetchCached, invalidateCached, clearCache } from "./cache";

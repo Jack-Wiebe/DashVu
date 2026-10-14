@@ -14,21 +14,18 @@ export interface RatePolicy {
   points: number;
   /** Window length in milliseconds. */
   windowMs: number;
-  /** Whether the bucket is shared per provider or per user. */
-  scope: "provider" | "user";
 }
 
 export interface ConnectorDefinition {
   /** Stable identifier, also used as the credential/cache namespace. */
   id: string;
   authKind: AuthKind;
-  /** OAuth scopes (oauth only) or requested permissions. */
-  scopes?: string[];
   /** Capability tags, e.g. `["nowPlaying", "control", "search"]`. */
   capabilities: string[];
   /** Default response cache lifetime in milliseconds. */
   cacheTtlMs: number;
-  ratePolicy: RatePolicy;
+  /** Only present on connectors whose `invoke` performs the outbound call. */
+  ratePolicy?: RatePolicy;
 }
 
 /**

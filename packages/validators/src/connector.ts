@@ -15,6 +15,11 @@ export const connectorIdSchema = z.enum([
   "icanhazdadjoke",
   "uselessFacts",
   "wikimediaOnThisDay",
+  "hackerNews",
+  "spaceflightNews",
+  "alJazeera",
+  "allsides",
+  "bbcNews",
 ]);
 
 export type ConnectorId = z.infer<typeof connectorIdSchema>;

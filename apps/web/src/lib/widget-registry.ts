@@ -5,6 +5,7 @@ import CalendarWidget from "@/components/widgets/CalendarWidget";
 import FunPackWidget from "@/components/widgets/FunPackWidget";
 import GenerativeArtWidget from "@/components/widgets/GenerativeArtWidget";
 import GalleryWidget from "@/components/widgets/GalleryWidget";
+import NewsWidget from "@/components/widgets/NewsWidget";
 import PlannerWidget from "@/components/widgets/PlannerWidget";
 import SpotifyWidget from "@/components/widgets/SpotifyWidget";
 import WeatherWidget from "@/components/widgets/WeatherWidget";
@@ -64,6 +65,14 @@ export const WIDGET_REGISTRY: Record<WidgetKind, WidgetDefinition> = {
     Type: GenerativeArtWidget,
     Icon: Icons.canvas,
     defaultTitle: "Generative Art",
+    defaultSize: "md",
+    sizes: ["sm", "md", "lrg"],
+  },
+  news: {
+    kind: "news",
+    Type: NewsWidget,
+    Icon: Icons.news,
+    defaultTitle: "News Briefing",
     defaultSize: "md",
     sizes: ["sm", "md", "lrg"],
   },

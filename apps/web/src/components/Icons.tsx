@@ -8,6 +8,7 @@ import {
   Sparkles,
   ListChecks,
   Palette,
+  Newspaper,
 } from "lucide-react";
 
 export const Icons = {
@@ -40,4 +41,5 @@ export const Icons = {
   funPack: (props: LucideProps) => <Sparkles {...props} />,
   planner: (props: LucideProps) => <ListChecks {...props} />,
   canvas: (props: LucideProps) => <Palette {...props} />,
+  news: (props: LucideProps) => <Newspaper {...props} />,
 };

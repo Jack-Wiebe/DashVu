@@ -9,3 +9,5 @@ export const CORE_PACKAGE = "@dashvu/core";
 export type { AuthKind, RatePolicy, ConnectorDefinition, Connector } from "./connector";
 
 export { describeWeatherCode } from "./weather";
+export { formatRelativeTime } from "./news";
+export type { NewsItem } from "./news";

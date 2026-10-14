@@ -9,6 +9,7 @@ import { z } from "zod";
 
 export * from "./connector";
 export * from "./planner";
+export * from "./news";
 
 export const widgetKindSchema = z.enum([
   "spotify",
@@ -18,6 +19,7 @@ export const widgetKindSchema = z.enum([
   "funPack",
   "planner",
   "canvas",
+  "news",
 ]);
 
 export type WidgetKind = z.infer<typeof widgetKindSchema>;

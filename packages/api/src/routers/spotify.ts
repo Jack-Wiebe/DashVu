@@ -2,10 +2,12 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import SpotifyWebApi from "spotify-web-api-node";
 import { db, userPreferences } from "@dashvu/db";
-import { getSpotifyApiForUser } from "../spotify";
+import { getConnector } from "../connectors/registry";
 import { protectedProcedure, router } from "../trpc";
 
 type PlaybackContextInfo = { type: string; name: string } | null;
+
+const getApi = (userId: string) => getConnector("spotify").invoke(userId, undefined);
 
 async function resolveContextName(
   api: SpotifyWebApi,
@@ -85,7 +87,7 @@ function spotifyErrorReason(e: unknown): string | null {
 
 export const spotifyRouter = router({
   getPlaybackState: protectedProcedure.query(async ({ ctx }) => {
-    const api = await getSpotifyApiForUser(ctx.session.user.id);
+    const api = await getApi(ctx.session.user.id);
     const { body } = await api.getMyCurrentPlaybackState();
 
     if (body) {
@@ -116,7 +118,7 @@ export const spotifyRouter = router({
   }),
 
   getPlaylists: protectedProcedure.query(async ({ ctx }) => {
-    const api = await getSpotifyApiForUser(ctx.session.user.id);
+    const api = await getApi(ctx.session.user.id);
     const { body } = await api.getUserPlaylists({ limit: 50 });
     return body.items.map((playlist) => ({
       uri: playlist.uri,
@@ -128,7 +130,7 @@ export const spotifyRouter = router({
   playContext: protectedProcedure
     .input(z.object({ uri: z.string().min(1) }))
     .mutation(async ({ ctx, input }): Promise<ControlResult> => {
-      const api = await getSpotifyApiForUser(ctx.session.user.id);
+      const api = await getApi(ctx.session.user.id);
       const start = () => api.play({ context_uri: input.uri });
       try {
         await start();
@@ -158,7 +160,7 @@ export const spotifyRouter = router({
   setShuffle: protectedProcedure
     .input(z.object({ state: z.boolean() }))
     .mutation(async ({ ctx, input }): Promise<ControlResult> => {
-      const api = await getSpotifyApiForUser(ctx.session.user.id);
+      const api = await getApi(ctx.session.user.id);
       try {
         await api.setShuffle(input.state);
         return { ok: true };
@@ -170,7 +172,7 @@ export const spotifyRouter = router({
   setRepeat: protectedProcedure
     .input(z.object({ state: z.enum(["off", "context", "track"]) }))
     .mutation(async ({ ctx, input }): Promise<ControlResult> => {
-      const api = await getSpotifyApiForUser(ctx.session.user.id);
+      const api = await getApi(ctx.session.user.id);
       try {
         await api.setRepeat(input.state);
         return { ok: true };
@@ -180,13 +182,13 @@ export const spotifyRouter = router({
     }),
 
   getDevices: protectedProcedure.query(async ({ ctx }) => {
-    const api = await getSpotifyApiForUser(ctx.session.user.id);
+    const api = await getApi(ctx.session.user.id);
     const { body } = await api.getMyDevices();
     return body.devices;
   }),
 
   play: protectedProcedure.mutation(async ({ ctx }): Promise<ControlResult> => {
-    const api = await getSpotifyApiForUser(ctx.session.user.id);
+    const api = await getApi(ctx.session.user.id);
     try {
       await api.play();
       return { ok: true };
@@ -205,7 +207,7 @@ export const spotifyRouter = router({
   }),
 
   pause: protectedProcedure.mutation(async ({ ctx }): Promise<ControlResult> => {
-    const api = await getSpotifyApiForUser(ctx.session.user.id);
+    const api = await getApi(ctx.session.user.id);
     try {
       await api.pause();
       return { ok: true };
@@ -219,7 +221,7 @@ export const spotifyRouter = router({
   }),
 
   next: protectedProcedure.mutation(async ({ ctx }): Promise<ControlResult> => {
-    const api = await getSpotifyApiForUser(ctx.session.user.id);
+    const api = await getApi(ctx.session.user.id);
     try {
       await api.skipToNext();
       return { ok: true };
@@ -231,7 +233,7 @@ export const spotifyRouter = router({
   }),
 
   previous: protectedProcedure.mutation(async ({ ctx }): Promise<ControlResult> => {
-    const api = await getSpotifyApiForUser(ctx.session.user.id);
+    const api = await getApi(ctx.session.user.id);
     try {
       await api.skipToPrevious();
       return { ok: true };
@@ -245,7 +247,7 @@ export const spotifyRouter = router({
   transferPlayback: protectedProcedure
     .input(z.object({ deviceId: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
-      const api = await getSpotifyApiForUser(ctx.session.user.id);
+      const api = await getApi(ctx.session.user.id);
       await api.transferMyPlayback([input.deviceId]);
       return { ok: true } as const;
     }),

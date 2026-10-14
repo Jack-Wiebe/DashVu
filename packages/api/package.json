@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@dashvu/core": "workspace:*",
     "@dashvu/db": "workspace:*",
     "@dashvu/validators": "workspace:*",
     "@googleapis/calendar": "^20.1.0",

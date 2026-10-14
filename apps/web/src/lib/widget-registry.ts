@@ -4,6 +4,7 @@ import { Icons } from "@/components/Icons";
 import CalendarWidget from "@/components/widgets/CalendarWidget";
 import GalleryWidget from "@/components/widgets/GalleryWidget";
 import SpotifyWidget from "@/components/widgets/SpotifyWidget";
+import WeatherWidget from "@/components/widgets/WeatherWidget";
 import type { WidgetConfig, WidgetDefinition } from "@/types/widget";
 
 export const WIDGET_REGISTRY: Record<WidgetKind, WidgetDefinition> = {
@@ -28,6 +29,14 @@ export const WIDGET_REGISTRY: Record<WidgetKind, WidgetDefinition> = {
     Type: CalendarWidget,
     Icon: Icons.calendar,
     defaultTitle: "Calendar",
+    defaultSize: "md",
+    sizes: ["sm", "md", "lrg"],
+  },
+  weather: {
+    kind: "weather",
+    Type: WeatherWidget,
+    Icon: Icons.weather,
+    defaultTitle: "Weather",
     defaultSize: "md",
     sizes: ["sm", "md", "lrg"],
   },

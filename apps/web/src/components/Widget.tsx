@@ -9,7 +9,8 @@ const Widget: React.FC<{
   actions?: React.ReactNode;
   style?: React.CSSProperties;
   innerRef?: React.Ref<HTMLElement>;
-}> = ({ config, actions, style, innerRef }) => {
+  onSettingsChange?: (settings: Record<string, unknown>) => void;
+}> = ({ config, actions, style, innerRef, onSettingsChange }) => {
   const definition = WIDGET_REGISTRY[config.kind];
 
   if (!definition) {
@@ -45,7 +46,7 @@ const Widget: React.FC<{
       </header>
 
       <div className="min-h-0 flex-1">
-        <Type className="h-full" settings={config.settings} />
+        <Type className="h-full" settings={config.settings} onSettingsChange={onSettingsChange} />
       </div>
     </section>
   );

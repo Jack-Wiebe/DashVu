@@ -6,6 +6,7 @@ import type { WidgetKind, WidgetSize } from "@dashvu/validators";
 export interface WidgetComponentProps {
   className?: string;
   settings?: Record<string, unknown> | null;
+  onSettingsChange?: (settings: Record<string, unknown>) => void;
 }
 
 export interface WidgetConfig {

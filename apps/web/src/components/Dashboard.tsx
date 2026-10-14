@@ -24,6 +24,7 @@ import { Check, Pencil, Plus } from "lucide-react";
 import { useOnClickOutside } from "@/hooks/use-on-click-outside";
 import { useToast } from "@/hooks/use-toast";
 import { trpc } from "@/lib/trpc/client";
+import { cn, menuSurfaceClass } from "@/lib/utils";
 import { createWidget, WIDGET_KINDS, WIDGET_REGISTRY } from "@/lib/widget-registry";
 
 import SortableWidget from "./SortableWidget";
@@ -97,6 +98,10 @@ const Dashboard = ({ initialDashboard }: { initialDashboard: DashboardData }) =>
     persist(widgets.map((widget) => (widget.id === id ? { ...widget, size } : widget)));
   };
 
+  const updateSettings = (id: string, settings: Record<string, unknown>) => {
+    persist(widgets.map((widget) => (widget.id === id ? { ...widget, settings } : widget)));
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
@@ -127,7 +132,9 @@ const Dashboard = ({ initialDashboard }: { initialDashboard: DashboardData }) =>
               </Button>
 
               {pickerOpen ? (
-                <div className="absolute right-0 top-full z-30 mt-1 w-44 rounded-md border border-zinc-700 bg-zinc-900 p-1 shadow-xl">
+                <div
+                  className={cn("absolute right-0 top-full z-30 mt-1 w-44 p-1", menuSurfaceClass)}
+                >
                   {WIDGET_KINDS.map((kind) => {
                     const definition = WIDGET_REGISTRY[kind];
                     const Icon = definition.Icon;
@@ -201,6 +208,7 @@ const Dashboard = ({ initialDashboard }: { initialDashboard: DashboardData }) =>
                   onMove={moveWidget}
                   onRemove={removeWidget}
                   onResize={resizeWidget}
+                  onSettingsChange={updateSettings}
                 />
               ))}
             </div>

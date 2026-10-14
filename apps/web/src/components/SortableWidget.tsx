@@ -17,6 +17,7 @@ interface SortableWidgetProps {
   onMove: (index: number, direction: -1 | 1) => void;
   onRemove: (id: string) => void;
   onResize: (id: string, size: WidgetSize) => void;
+  onSettingsChange: (id: string, settings: Record<string, unknown>) => void;
 }
 
 const SortableWidget = ({
@@ -28,6 +29,7 @@ const SortableWidget = ({
   onMove,
   onRemove,
   onResize,
+  onSettingsChange,
 }: SortableWidgetProps) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: widget.id,
@@ -41,6 +43,7 @@ const SortableWidget = ({
     <Widget
       config={widget}
       innerRef={setNodeRef}
+      onSettingsChange={(settings) => onSettingsChange(widget.id, settings)}
       style={{
         transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
         transition,

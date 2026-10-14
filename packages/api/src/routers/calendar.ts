@@ -1,10 +1,10 @@
 import { calendarEventsInputSchema } from "@dashvu/validators";
-import { getCalendarClientForUser } from "../google";
+import { getConnector } from "../connectors/registry";
 import { protectedProcedure, router } from "../trpc";
 
 export const calendarRouter = router({
   getEvents: protectedProcedure.input(calendarEventsInputSchema).query(async ({ ctx, input }) => {
-    const calendar = await getCalendarClientForUser(ctx.session.user.id);
+    const calendar = await getConnector("google").invoke(ctx.session.user.id, undefined);
 
     const { data } = await calendar.events.list({
       calendarId: "primary",

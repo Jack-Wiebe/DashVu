@@ -7,7 +7,9 @@ import { z } from "zod";
  * so input rules live in exactly one place.
  */
 
-export const widgetKindSchema = z.enum(["spotify", "gallery", "calendar"]);
+export * from "./connector";
+
+export const widgetKindSchema = z.enum(["spotify", "gallery", "calendar", "weather"]);
 
 export type WidgetKind = z.infer<typeof widgetKindSchema>;
 
@@ -50,3 +52,16 @@ export const calendarEventsInputSchema = z
   .default({});
 
 export type CalendarEventsInput = z.infer<typeof calendarEventsInputSchema>;
+
+export const weatherCurrentInputSchema = z.object({
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+});
+
+export type WeatherCurrentInput = z.infer<typeof weatherCurrentInputSchema>;
+
+export const weatherSearchInputSchema = z.object({
+  query: z.string().min(1).max(120),
+});
+
+export type WeatherSearchInput = z.infer<typeof weatherSearchInputSchema>;

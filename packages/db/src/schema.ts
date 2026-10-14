@@ -1,4 +1,5 @@
 import type { AdapterAccountType } from "@auth/core/adapters";
+import { sql } from "drizzle-orm";
 import {
   boolean,
   index,
@@ -8,6 +9,7 @@ import {
   primaryKey,
   text,
   timestamp,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 /**
@@ -73,12 +75,42 @@ export const dashboards = pgTable("dashboard", {
     .$defaultFn(() => crypto.randomUUID()),
   userId: text("userId")
     .notNull()
-    .unique()
     .references(() => users.id, { onDelete: "cascade" }),
   name: text("name").notNull().default("My Dashboard"),
+  position: integer("position").notNull().default(0),
   createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
   updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
 });
+
+/**
+ * A per-user, per-kind container that owns widget content (and, when a widget
+ * opts in via `shareSettings`, its settings). Widgets that point at the same
+ * group share state across dashboards; the default group makes every widget of
+ * a kind shared unless it is pointed at an independent/linked group.
+ */
+export const widgetGroups = pgTable(
+  "widgetGroup",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull(),
+    name: text("name").notNull(),
+    isDefault: boolean("isDefault").notNull().default(false),
+    settings: jsonb("settings").$type<Record<string, unknown>>(),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (group) => [
+    uniqueIndex("widgetGroup_default_idx")
+      .on(group.userId, group.kind)
+      .where(sql`${group.isDefault}`),
+    index("widgetGroup_userId_idx").on(group.userId),
+  ]
+);
 
 export const widgets = pgTable("widget", {
   id: text("id")
@@ -87,11 +119,15 @@ export const widgets = pgTable("widget", {
   dashboardId: text("dashboardId")
     .notNull()
     .references(() => dashboards.id, { onDelete: "cascade" }),
+  groupId: text("groupId")
+    .notNull()
+    .references(() => widgetGroups.id, { onDelete: "cascade" }),
   kind: text("kind").notNull(),
   title: text("title").notNull(),
   position: integer("position").notNull().default(0),
   size: text("size").notNull().default("lg:col-span-1"),
   settings: jsonb("settings").$type<Record<string, unknown>>(),
+  shareSettings: boolean("shareSettings").notNull().default(false),
   createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
 });
 
@@ -101,12 +137,15 @@ export const userPreferences = pgTable("userPreferences", {
     .references(() => users.id, { onDelete: "cascade" }),
   theme: text("theme").notNull().default("dark"),
   lastActiveDeviceId: text("lastActiveDeviceId"),
+  activeDashboardId: text("activeDashboardId").references(() => dashboards.id, {
+    onDelete: "set null",
+  }),
   updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
 });
 
 /**
- * Generic per-widget content items (e.g. the planner widget's notes, todos,
- * and countdowns). `mode` separates the item lists within a single widget.
+ * Generic per-group content items (e.g. the planner widget's notes, todos, and
+ * countdowns). `mode` separates the item lists within a single widget group.
  */
 export const widgetItems = pgTable(
   "widgetItem",
@@ -114,9 +153,9 @@ export const widgetItems = pgTable(
     id: text("id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
-    widgetId: text("widgetId")
+    groupId: text("groupId")
       .notNull()
-      .references(() => widgets.id, { onDelete: "cascade" }),
+      .references(() => widgetGroups.id, { onDelete: "cascade" }),
     mode: text("mode").notNull(),
     position: integer("position").notNull().default(0),
     text: text("text").notNull(),
@@ -125,5 +164,5 @@ export const widgetItems = pgTable(
     createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
     updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
   },
-  (item) => [index("widgetItem_widgetId_mode_idx").on(item.widgetId, item.mode)]
+  (item) => [index("widgetItem_groupId_mode_idx").on(item.groupId, item.mode)]
 );

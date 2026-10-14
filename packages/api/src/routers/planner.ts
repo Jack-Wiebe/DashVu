@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { and, asc, eq, sql } from "drizzle-orm";
 
-import { dashboards, db, widgetItems, widgets } from "@dashvu/db";
+import { dashboards, db, widgetGroups, widgetItems, widgets } from "@dashvu/db";
 import {
   plannerItemCreateSchema,
   plannerItemRemoveSchema,
@@ -28,30 +28,31 @@ function serializeItem(row: ItemRow) {
   };
 }
 
-async function isWidgetOwned(userId: string, widgetId: string): Promise<boolean> {
+async function resolveGroup(userId: string, widgetId: string): Promise<string | null> {
   const [row] = await db
-    .select({ id: widgets.id })
+    .select({ groupId: widgets.groupId })
     .from(widgets)
     .innerJoin(dashboards, eq(widgets.dashboardId, dashboards.id))
     .where(and(eq(widgets.id, widgetId), eq(dashboards.userId, userId)))
     .limit(1);
 
-  return Boolean(row);
+  return row?.groupId ?? null;
 }
 
-async function assertWidgetOwned(userId: string, widgetId: string) {
-  if (!(await isWidgetOwned(userId, widgetId))) {
+async function requireGroup(userId: string, widgetId: string): Promise<string> {
+  const groupId = await resolveGroup(userId, widgetId);
+  if (!groupId) {
     throw new TRPCError({ code: "NOT_FOUND", message: "Widget not found" });
   }
+  return groupId;
 }
 
 async function assertItemOwned(userId: string, itemId: string) {
   const [row] = await db
     .select({ id: widgetItems.id })
     .from(widgetItems)
-    .innerJoin(widgets, eq(widgetItems.widgetId, widgets.id))
-    .innerJoin(dashboards, eq(widgets.dashboardId, dashboards.id))
-    .where(and(eq(widgetItems.id, itemId), eq(dashboards.userId, userId)))
+    .innerJoin(widgetGroups, eq(widgetItems.groupId, widgetGroups.id))
+    .where(and(eq(widgetItems.id, itemId), eq(widgetGroups.userId, userId)))
     .limit(1);
 
   if (!row) {
@@ -64,31 +65,32 @@ export const plannerRouter = router({
     // A freshly-added widget may not be persisted yet (the dashboard renders it
     // optimistically before saveLayout commits), so treat an unknown widget as
     // an empty list rather than erroring.
-    if (!(await isWidgetOwned(ctx.session.user.id, input.widgetId))) {
+    const groupId = await resolveGroup(ctx.session.user.id, input.widgetId);
+    if (!groupId) {
       return [];
     }
 
     const rows = await db
       .select()
       .from(widgetItems)
-      .where(and(eq(widgetItems.widgetId, input.widgetId), eq(widgetItems.mode, input.mode)))
+      .where(and(eq(widgetItems.groupId, groupId), eq(widgetItems.mode, input.mode)))
       .orderBy(asc(widgetItems.position), asc(widgetItems.createdAt));
 
     return rows.map(serializeItem);
   }),
 
   create: protectedProcedure.input(plannerItemCreateSchema).mutation(async ({ ctx, input }) => {
-    await assertWidgetOwned(ctx.session.user.id, input.widgetId);
+    const groupId = await requireGroup(ctx.session.user.id, input.widgetId);
 
     const [max] = await db
       .select({ position: sql<number>`coalesce(max(${widgetItems.position}), -1)` })
       .from(widgetItems)
-      .where(and(eq(widgetItems.widgetId, input.widgetId), eq(widgetItems.mode, input.mode)));
+      .where(and(eq(widgetItems.groupId, groupId), eq(widgetItems.mode, input.mode)));
 
     const [row] = await db
       .insert(widgetItems)
       .values({
-        widgetId: input.widgetId,
+        groupId,
         mode: input.mode,
         position: (max?.position ?? -1) + 1,
         text: input.text,
@@ -126,12 +128,12 @@ export const plannerRouter = router({
   removeChecked: protectedProcedure
     .input(plannerItemsInputSchema)
     .mutation(async ({ ctx, input }) => {
-      await assertWidgetOwned(ctx.session.user.id, input.widgetId);
+      const groupId = await requireGroup(ctx.session.user.id, input.widgetId);
       await db
         .delete(widgetItems)
         .where(
           and(
-            eq(widgetItems.widgetId, input.widgetId),
+            eq(widgetItems.groupId, groupId),
             eq(widgetItems.mode, input.mode),
             eq(widgetItems.checked, true)
           )
@@ -140,7 +142,7 @@ export const plannerRouter = router({
     }),
 
   reorder: protectedProcedure.input(plannerItemsReorderSchema).mutation(async ({ ctx, input }) => {
-    await assertWidgetOwned(ctx.session.user.id, input.widgetId);
+    const groupId = await requireGroup(ctx.session.user.id, input.widgetId);
 
     for (let index = 0; index < input.ids.length; index++) {
       await db
@@ -149,7 +151,7 @@ export const plannerRouter = router({
         .where(
           and(
             eq(widgetItems.id, input.ids[index]),
-            eq(widgetItems.widgetId, input.widgetId),
+            eq(widgetItems.groupId, groupId),
             eq(widgetItems.mode, input.mode)
           )
         );

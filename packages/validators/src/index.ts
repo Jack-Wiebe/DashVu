@@ -11,6 +11,7 @@ export * from "./connector";
 export * from "./planner";
 export * from "./news";
 export * from "./discover";
+export * from "./dashboard";
 
 export const widgetKindSchema = z.enum([
   "spotify",
@@ -37,6 +38,8 @@ export const widgetLayoutItemSchema = z.object({
   size: widgetSizeSchema,
   position: z.number().int().min(0),
   settings: z.record(z.unknown()).nullish(),
+  groupId: z.string().min(1).optional(),
+  shareSettings: z.boolean().optional(),
 });
 
 export type WidgetLayoutItem = z.infer<typeof widgetLayoutItemSchema>;

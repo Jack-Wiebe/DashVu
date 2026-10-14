@@ -94,16 +94,34 @@ defaultSize, sizes }`); `Widget.tsx` resolves the component/icon from there. The
   `@dashvu/validators` (`widgetKindSchema`). Widget `size` is a **token** (`sm|md|lrg`,
   `widgetSizeSchema`), mapped to Tailwind classes in `WIDGET_SIZE_CLASSES` — never store raw Tailwind
   class strings in the DB (Tailwind would purge them).
-- Dashboard layout is persisted per user: server components load it via
-  `createCaller(...).dashboard.getMine()` (`apps/web/src/app/page.tsx`), the client
-  (`apps/web/src/components/Dashboard.tsx`) edits it and auto-saves with
-  `dashboard.saveLayout`. `saveLayout` upserts by client-generated widget id scoped to the owner's
-  dashboard. `widget.settings` (jsonb) is reserved for future per-widget config.
-- Widgets that own **content** (not just config) get a dedicated table keyed to `widget.id` with
+- Users have **multiple dashboards (tabs)**. The server layout bootstraps them via
+  `createCaller(...).dashboard.bootstrap()` (`apps/web/src/app/layout.tsx`), which returns
+  `{ dashboards, activeId, active }`; the client store is `apps/web/src/components/DashboardsProvider.tsx`
+  (wraps the tree inside `TRPCProvider`) and is consumed by both `NavBar` (tab strip + Edit layout / Add
+  widget) and `page.tsx` → `Dashboard.tsx` (grid). `dashboard.get({ id })` loads one dashboard,
+  `dashboard.list` lists tabs; `create`/`rename`/`remove`/`reorder`/`setActive` manage tabs, and
+  `setActive` upserts `userPreferences.activeDashboardId` (FK → `dashboard.id`, `ON DELETE SET NULL`).
+  The active tab is persisted in the DB; the first-ever (auto-created) dashboard seeds
+  `DEFAULT_WIDGET_LAYOUT`, later ones start empty. Tab management (add/rename/delete/drag-reorder) is
+  gated to edit mode; clicking a tab always switches.
+- Dashboard layout is persisted per user: the client edits it and auto-saves with `dashboard.saveLayout`.
+  `saveLayout` upserts by client-generated widget id scoped to the owner's dashboard. `widget.settings`
+  (jsonb) is reserved for future per-widget config.
+- **Widget state is shared across tabs via `widgetGroup`** (per user, per `kind`). Every widget points at
+  a group (`widget.groupId`, `ON DELETE CASCADE`); `saveLayout` resolves the owner's default group per
+  kind (`resolveGroupForKind` in `packages/api/src/groups.ts`) unless the client supplies a `groupId` it
+  owns, so all instances of a kind share content by default. `widgets.shareSettings` (opt-in) routes
+  `settings` onto `widgetGroup.settings` (single source of truth) instead of the widget; `get` returns
+  the effective settings. **Independent/linked instances (multiple groups per kind) are a model
+  capability only — no UI yet**; a settings window will set `groupId`/`shareSettings` through
+  `saveLayout` (no router change needed). Group defaults (and their content) persist after the last
+  widget is deleted.
+- Widgets that own **content** (not just config) get a dedicated table keyed to `widgetGroup.id` with
   `ON DELETE CASCADE`; the `planner` widget uses `widgetItem` + the `planner` router. Widget components
-  receive `widgetId` via `WidgetComponentProps` and call tRPC directly — every such procedure must
-  verify ownership by joining the row back to `dashboard.userId`. Return dates as ISO strings (no
-  superjson transformer) and keep multi-step writes sequential.
+  receive `widgetId` via `WidgetComponentProps` and call tRPC directly — such procedures resolve the
+  `widgetId → groupId` (verifying `widget → dashboard → userId`) and then scope rows by `groupId`; every
+  item mutation verifies ownership by joining back to `widgetGroup.userId`. Return dates as ISO strings
+  (no superjson transformer) and keep multi-step writes sequential.
 - The DB client uses `drizzle-orm/neon-http`, which **does not support `db.transaction`** — write
   multi-step operations sequentially (see `packages/api/src/routers/dashboard.ts`).
 - Server data access goes through tRPC routers in `packages/api` (`appRouter`); the Next handler lives
@@ -146,10 +164,14 @@ add Vitest/Playwright with tests colocated next to source. When adding a test sc
   `calendar.getEvents` and shows a reconnect prompt when `hasCalendar` is false. Enabling the Google
   Calendar API + consent-screen scope is a manual Cloud console step (see `.env.example`).
 - Phase 4 (in progress): user config now persists (`dashboard`/`widget`). Stage 1 shipped the widget
-  registry, `dashboard.getMine`/`saveLayout`, and an edit mode with add/remove/reorder + optimistic
-  auto-save. Stage 2 replaced reorder buttons with drag-and-drop via `@dnd-kit` (sortable,
-  `rectSortingStrategy`, handle-only drag + kept up/down buttons as fallback). Still TODO:
-  export/import layout, per-widget settings panels.
+  registry, `dashboard.saveLayout`, and an edit mode with add/remove/reorder + optimistic auto-save.
+  Stage 2 replaced reorder buttons with drag-and-drop via `@dnd-kit` (sortable, `rectSortingStrategy`,
+  handle-only drag + kept up/down buttons as fallback). Stage 3 added multiple dashboards (tabs) with
+  DB-persisted active tab (`dashboard.bootstrap`/`list`/`get`/`create`/`rename`/`remove`/`reorder`/
+  `setActive`, tab drag via `horizontalListSortingStrategy`, management gated to edit mode). Stage 4
+  introduced `widgetGroup` so widgets of a kind share state across tabs (see the sharing bullet above;
+  model/API only, no UI). Still TODO: export/import layout, per-widget settings panels (link/independent
+  instances + settings sharing).
 
 <!-- BEGIN:turborepo-agent-rules -->
 

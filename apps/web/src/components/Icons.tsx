@@ -9,6 +9,7 @@ import {
   ListChecks,
   Palette,
   Newspaper,
+  Telescope,
 } from "lucide-react";
 
 export const Icons = {
@@ -42,4 +43,5 @@ export const Icons = {
   planner: (props: LucideProps) => <ListChecks {...props} />,
   canvas: (props: LucideProps) => <Palette {...props} />,
   news: (props: LucideProps) => <Newspaper {...props} />,
+  discover: (props: LucideProps) => <Telescope {...props} />,
 };

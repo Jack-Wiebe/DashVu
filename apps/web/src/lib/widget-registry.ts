@@ -2,6 +2,7 @@ import type { WidgetKind, WidgetSize } from "@dashvu/validators";
 
 import { Icons } from "@/components/Icons";
 import CalendarWidget from "@/components/widgets/CalendarWidget";
+import DiscoverWidget from "@/components/widgets/DiscoverWidget";
 import FunPackWidget from "@/components/widgets/FunPackWidget";
 import GenerativeArtWidget from "@/components/widgets/GenerativeArtWidget";
 import GalleryWidget from "@/components/widgets/GalleryWidget";
@@ -73,6 +74,14 @@ export const WIDGET_REGISTRY: Record<WidgetKind, WidgetDefinition> = {
     Type: NewsWidget,
     Icon: Icons.news,
     defaultTitle: "News Briefing",
+    defaultSize: "md",
+    sizes: ["sm", "md", "lrg"],
+  },
+  discover: {
+    kind: "discover",
+    Type: DiscoverWidget,
+    Icon: Icons.discover,
+    defaultTitle: "Discover",
     defaultSize: "md",
     sizes: ["sm", "md", "lrg"],
   },

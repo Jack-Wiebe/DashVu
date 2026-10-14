@@ -20,6 +20,8 @@ export const connectorIdSchema = z.enum([
   "alJazeera",
   "allsides",
   "bbcNews",
+  "cleveland",
+  "nasaImages",
 ]);
 
 export type ConnectorId = z.infer<typeof connectorIdSchema>;

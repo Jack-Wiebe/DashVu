@@ -5,9 +5,11 @@ import type { ConnectorId } from "@dashvu/validators";
 import { alJazeeraConnector } from "./alJazeera";
 import { allsidesConnector } from "./allsides";
 import { bbcNewsConnector } from "./bbcNews";
+import { clevelandConnector } from "./cleveland";
 import { googleConnector } from "./google";
 import { hackerNewsConnector } from "./hackerNews";
 import { icanhazdadjokeConnector } from "./icanhazdadjoke";
+import { nasaImagesConnector } from "./nasaImages";
 import { openMeteoConnector } from "./openMeteo";
 import { openMeteoGeocodingConnector } from "./openMeteoGeocoding";
 import { rainViewerConnector } from "./rainViewer";
@@ -32,6 +34,8 @@ export const CONNECTORS = {
   alJazeera: alJazeeraConnector,
   allsides: allsidesConnector,
   bbcNews: bbcNewsConnector,
+  cleveland: clevelandConnector,
+  nasaImages: nasaImagesConnector,
 } satisfies Record<ConnectorId, Connector>;
 
 export function getConnector<K extends ConnectorId>(id: K): (typeof CONNECTORS)[K] {

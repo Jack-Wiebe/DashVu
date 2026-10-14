@@ -11,3 +11,5 @@ export type { AuthKind, RatePolicy, ConnectorDefinition, Connector } from "./con
 export { describeWeatherCode } from "./weather";
 export { formatRelativeTime } from "./news";
 export type { NewsItem } from "./news";
+export { dailyIndex, utcDayNumber, utcDateKey } from "./discover";
+export type { Artwork, SpaceImage } from "./discover";

@@ -1,180 +1,307 @@
 "use client";
 
-import React, { useRef, useEffect } from "react";
+import React, { useCallback, useRef, useEffect, useState } from "react";
 import type { WidgetComponentProps } from "@/types/widget";
 import { Button } from "../ui/Button";
-import { Shuffle, ChevronRight, ChevronLeft } from "lucide-react";
-import { ImageFilter, filters } from "@/lib/filters";
+import { Shuffle, Upload, Download, Dices } from "lucide-react";
+import {
+  filters,
+  FILTER_GROUPS,
+  FILTER_SPECS,
+  getFilterDefaultParam,
+  hasFilterParam,
+  formatFilterParam,
+} from "@/lib/filters";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+} from "../ui/dropdown-menu";
+import { Slider } from "../ui/slider";
 
 const GalleryWidget: React.FC<WidgetComponentProps> = ({ className }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const contextRef = useRef<CanvasRenderingContext2D | null>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
-  const originalImageSrcRef = useRef<string>("");
+  const uploadRef = useRef<HTMLInputElement | null>(null);
+  const blobUrlRef = useRef<string | null>(null);
   const resizeTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const currentFilterRef = useRef<number>(0);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  const [selectedFilterId, setSelectedFilterId] = useState<string>("passThrough");
+  const [filterParam, setFilterParam] = useState<number | undefined>(() =>
+    getFilterDefaultParam("passThrough")
+  );
+  const [isUploaded, setIsUploaded] = useState(false);
+  const [size, setSize] = useState({ width: 0, height: 0 });
+
+  const applyFilter = useCallback(() => {
+    const canvas = canvasRef.current;
+    const ctx = contextRef.current;
+    if (!canvas || !ctx || canvas.width === 0 || canvas.height === 0) return;
+    let src: ImageData;
+    try {
+      src = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    } catch {
+      return;
+    }
+    const copy = new ImageData(new Uint8ClampedArray(src.data), canvas.width, canvas.height);
+    const id = selectedFilterId;
+    const filter = (filters as Record<string, (img: ImageData, param?: number) => ImageData>)[id];
+    let out: ImageData = copy;
+    if (filter) {
+      const param = filterParam ?? getFilterDefaultParam(id);
+      out = hasFilterParam(id) && param !== undefined ? filter(copy, param) : filter(copy);
+    }
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.putImageData(out, 0, 0);
+  }, [selectedFilterId, filterParam]);
+
+  const redrawWithCurrent = useCallback(() => {
+    const ctx = contextRef.current;
+    const canvas = canvasRef.current;
+    const img = imageRef.current;
+    if (!ctx || !canvas || !img || !img.complete || size.width === 0 || size.height === 0) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, size.width, size.height);
+    applyFilter();
+  }, [size.width, size.height, applyFilter]);
+
+  const createImage = useCallback(() => {
+    const img = new Image();
+    img.crossOrigin = "Anonymous";
+    img.onload = () => latest.current.redraw();
+    return img;
+  }, []);
+
+  const requestImgFromAPI = useCallback(async () => {
+    if (size.width === 0 || size.height === 0) return;
+    const w = Math.max(1, Math.floor(size.width));
+    const h = Math.max(1, Math.floor(size.height));
+    try {
+      const response = await fetch(`https://picsum.photos/${w}/${h}?random=2`);
+      const blob = await response.blob();
+      if (!imageRef.current) imageRef.current = createImage();
+      if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
+      const url = URL.createObjectURL(blob);
+      blobUrlRef.current = url;
+      setIsUploaded(false);
+      imageRef.current.src = url;
+    } catch {
+      return;
+    }
+  }, [size.width, size.height, createImage]);
+
+  const latest = useRef({
+    redraw: () => {},
+    fetch: async () => {},
+    isUploaded: false,
+  });
+  latest.current.redraw = redrawWithCurrent;
+  latest.current.fetch = requestImgFromAPI;
+  latest.current.isUploaded = isUploaded;
 
   useEffect(() => {
     contextRef.current = canvasRef.current?.getContext("2d") ?? null;
-    if (contextRef.current == null) throw new Error("Could not get context");
+    if (!imageRef.current) imageRef.current = createImage();
+  }, [createImage]);
 
-    // image = generateImage();
-    // requestImgFromAPI();
-    (async () => {
-      imageRef.current = generateImage();
-      await requestImgFromAPI();
-    })();
-    //initGallery().then(() => console.log("hello"));
-
-    const requestResizeImage = () => {
-      //console.log("Calling new image from resize");
-      requestImgFromAPI();
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const observer = new ResizeObserver((entries) => {
+      const rect = entries[0]?.contentRect;
+      if (!rect) return;
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        setSize({
+          width: Math.max(1, Math.round(rect.width)),
+          height: Math.max(1, Math.round(rect.height)),
+        });
+      }, 120);
+    });
+    observer.observe(el);
+    return () => {
+      clearTimeout(timer);
+      observer.disconnect();
     };
+  }, []);
 
-    const resizeListener = () => {
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || size.width === 0 || size.height === 0) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.floor(size.width * dpr);
+    canvas.height = Math.floor(size.height * dpr);
+    canvas.style.width = `${size.width}px`;
+    canvas.style.height = `${size.height}px`;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    contextRef.current = ctx;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    if (latest.current.isUploaded) latest.current.redraw();
+    else latest.current.fetch();
+  }, [size.width, size.height]);
+
+  useEffect(() => {
+    const onResize = () => {
       clearTimeout(resizeTimeoutRef.current);
       resizeTimeoutRef.current = setTimeout(() => {
-        requestResizeImage();
+        if (latest.current.isUploaded) latest.current.redraw();
+        else latest.current.fetch();
       }, 100);
     };
-    // set resize listener
-    window.addEventListener("resize", resizeListener);
-    // clean up function
+    window.addEventListener("resize", onResize);
     return () => {
-      // remove resize listener
-      window.removeEventListener("resize", resizeListener);
+      window.removeEventListener("resize", onResize);
+      clearTimeout(resizeTimeoutRef.current);
     };
-  });
+  }, []);
 
-  const generateImage = () => {
-    let img = new Image();
-    img.crossOrigin = "Anonymous";
+  useEffect(() => {
+    redrawWithCurrent();
+  }, [redrawWithCurrent]);
 
-    img.onload = () => {
-      loadImage(contextRef.current);
+  useEffect(() => {
+    return () => {
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current);
+        blobUrlRef.current = null;
+      }
     };
+  }, []);
 
-    return img;
+  const shuffleImage = () => {
+    latest.current.fetch();
   };
 
-  //create request to picsum API
-  const requestImgFromAPI = async () => {
-    const api: RequestInfo =
-      "https://picsum.photos/" +
-      canvasRef.current?.width +
-      "/" +
-      canvasRef.current?.height +
-      "?random=2";
-    const request = new Request(api);
-    await fetch(request)
-      .then((response) => response.blob())
-      .then((blob) => {
-        if (!imageRef.current) return;
-        imageRef.current.src = URL.createObjectURL(blob);
-        originalImageSrcRef.current = imageRef.current.src;
-        //console.log(originalImageSrc);
-      });
+  const onUploadClick = () => {
+    uploadRef.current?.click();
   };
 
-  const resetImageSource = () => {
-    if (imageRef.current) imageRef.current.src = originalImageSrcRef.current;
+  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current);
+        blobUrlRef.current = null;
+      }
+      if (!imageRef.current) imageRef.current = createImage();
+      setIsUploaded(true);
+      imageRef.current.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
   };
 
-  const loadImage = (context: CanvasRenderingContext2D | null) => {
-    //clear the canvas
-    context?.clearRect(0, 0, canvasRef.current?.width!, canvasRef.current?.height!);
-
-    //draw the new image
-    if (imageRef.current) {
-      context?.drawImage(
-        imageRef.current,
-        0,
-        0,
-        canvasRef.current?.width!,
-        canvasRef.current?.height!
-      );
+  const onDownload = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    try {
+      const dataUrl = canvas.toDataURL("image/png");
+      const a = document.createElement("a");
+      a.href = dataUrl;
+      a.download = `dashvu-gallery-${selectedFilterId}.png`;
+      a.click();
+    } catch {
+      return;
     }
-
-    applyFilter();
   };
 
-  const clearCanvas = () => {
-    contextRef.current?.clearRect(0, 0, canvasRef.current?.width!, canvasRef.current?.height!);
+  const onFilterSelect = (id: string) => {
+    setSelectedFilterId(id);
+    setFilterParam(getFilterDefaultParam(id));
   };
 
-  const applyFilter = () => {
-    //get Image Data
-    let imageData: ImageData = contextRef.current?.getImageData(
-      0,
-      0,
-      canvasRef.current?.width!,
-      canvasRef.current?.height!
-    )!;
-
-    //apply filter to image data
-    const func = Object.keys(filters)[currentFilterRef.current];
-    if (func) imageData = filters[func as keyof Record<string, ImageFilter>](imageData);
-
-    //console.log(imageData);
-
-    //redraw image
-    contextRef.current?.clearRect(0, 0, canvasRef.current?.width!, canvasRef.current?.height!);
-    contextRef.current?.putImageData(imageData, 0, 0);
+  const randomizeFilter = () => {
+    const ids = Object.keys(FILTER_SPECS).filter((id) => id !== "passThrough");
+    const id = ids[Math.floor(Math.random() * ids.length)];
+    setSelectedFilterId(id);
+    setFilterParam(getFilterDefaultParam(id));
   };
 
-  //
-  //Handlers
-  //
-
-  const shuffleImage = async () => {
-    contextRef.current = canvasRef.current?.getContext("2d") ?? null;
-    clearCanvas();
-    imageRef.current = generateImage();
-    await requestImgFromAPI();
-  };
-
-  const nextFilter = () => {
-    currentFilterRef.current = (currentFilterRef.current + 1) % Object.keys(filters).length;
-    //console.log("Filter number = ", currentFilter);
-
-    contextRef.current = canvasRef.current?.getContext("2d") ?? null;
-
-    clearCanvas();
-    imageRef.current = generateImage();
-    resetImageSource();
-    applyFilter();
-  };
-
-  const previousFilter = () => {
-    currentFilterRef.current =
-      (currentFilterRef.current + Object.keys(filters).length - 1) % Object.keys(filters).length;
-    //console.log("Filter number = ", currentFilter);
-
-    contextRef.current = canvasRef.current?.getContext("2d") ?? null;
-
-    clearCanvas();
-    imageRef.current = generateImage();
-    resetImageSource();
-    applyFilter();
-  };
-
-  //
-  //Rendering
-  //
+  const currentParam = filterParam ?? getFilterDefaultParam(selectedFilterId) ?? 0;
 
   return (
     <div className={className}>
-      <canvas className="w-full h-4/5 mt-1 mb-3" ref={canvasRef} />
-      <div className="flex items-center justify-evenly gap-2">
-        <Button onClick={previousFilter}>
-          <ChevronLeft />
-        </Button>
-        <Button onClick={shuffleImage}>
-          <Shuffle />
-        </Button>
-        <Button onClick={nextFilter}>
-          <ChevronRight />
-        </Button>
+      <div ref={containerRef} className="w-full h-4/5 mt-1 mb-3">
+        <canvas ref={canvasRef} className="w-full h-full" />
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-1">
+          <Button size="xs" variant="ghost" onClick={onUploadClick} aria-label="Upload image">
+            <Upload className="h-3.5 w-3.5" />
+          </Button>
+          <input ref={uploadRef} type="file" accept="image/*" hidden onChange={onFileChange} />
+          <Button
+            size="xs"
+            variant="ghost"
+            onClick={shuffleImage}
+            aria-label="Shuffle random image"
+          >
+            <Shuffle className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            size="xs"
+            variant="ghost"
+            onClick={onDownload}
+            aria-label="Download filtered image"
+          >
+            <Download className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="flex w-40 items-center gap-1">
+            {hasFilterParam(selectedFilterId) && (
+              <>
+                <Slider
+                  value={[currentParam]}
+                  min={FILTER_SPECS[selectedFilterId]?.range?.[0]}
+                  max={FILTER_SPECS[selectedFilterId]?.range?.[1]}
+                  step={FILTER_SPECS[selectedFilterId]?.step ?? 1}
+                  onValueChange={([v]) => setFilterParam(v)}
+                />
+                <span className="w-8 text-right text-xs">
+                  {formatFilterParam(selectedFilterId, currentParam)}
+                </span>
+              </>
+            )}
+          </div>
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger asChild>
+              <Button size="xs" variant="outline">
+                {FILTER_SPECS[selectedFilterId]?.label ?? selectedFilterId}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="max-h-80 overflow-y-auto">
+              {FILTER_GROUPS.map((group) => (
+                <React.Fragment key={group.id}>
+                  <DropdownMenuLabel>{group.label}</DropdownMenuLabel>
+                  {Object.entries(FILTER_SPECS)
+                    .filter(([, spec]) => spec.group === group.id)
+                    .map(([id, spec]) => (
+                      <DropdownMenuItem
+                        key={id}
+                        onSelect={() => onFilterSelect(id)}
+                        className={selectedFilterId === id ? "bg-zinc-800" : ""}
+                      >
+                        {spec.label}
+                      </DropdownMenuItem>
+                    ))}
+                </React.Fragment>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button size="xs" variant="ghost" onClick={randomizeFilter} aria-label="Randomize filter">
+            <Dices className="h-3.5 w-3.5" />
+          </Button>
+        </div>
       </div>
     </div>
   );

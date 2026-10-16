@@ -22,6 +22,9 @@ export const connectorIdSchema = z.enum([
   "bbcNews",
   "cleveland",
   "nasaImages",
+  "dictionaryApi",
+  "datamuse",
+  "wiktionary",
 ]);
 
 export type ConnectorId = z.infer<typeof connectorIdSchema>;

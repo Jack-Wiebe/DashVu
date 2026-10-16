@@ -11,6 +11,7 @@ export * from "./connector";
 export * from "./planner";
 export * from "./news";
 export * from "./discover";
+export * from "./dictionary";
 export * from "./dashboard";
 
 export const widgetKindSchema = z.enum([
@@ -23,6 +24,7 @@ export const widgetKindSchema = z.enum([
   "canvas",
   "news",
   "discover",
+  "dictionary",
 ]);
 
 export type WidgetKind = z.infer<typeof widgetKindSchema>;

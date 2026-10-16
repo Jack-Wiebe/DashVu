@@ -13,3 +13,11 @@ export { formatRelativeTime } from "./news";
 export type { NewsItem } from "./news";
 export { dailyIndex, utcDayNumber, utcDateKey } from "./discover";
 export type { Artwork, SpaceImage } from "./discover";
+export { WORD_OF_THE_DAY, stripHtml } from "./dictionary";
+export type {
+  DictionaryEntry,
+  DictionaryMeaning,
+  DictionaryDefinition,
+  RelatedWord,
+  RelatedRelation,
+} from "./dictionary";

@@ -6,6 +6,8 @@ import { alJazeeraConnector } from "./alJazeera";
 import { allsidesConnector } from "./allsides";
 import { bbcNewsConnector } from "./bbcNews";
 import { clevelandConnector } from "./cleveland";
+import { datamuseConnector } from "./datamuse";
+import { dictionaryApiConnector } from "./dictionaryApi";
 import { googleConnector } from "./google";
 import { hackerNewsConnector } from "./hackerNews";
 import { icanhazdadjokeConnector } from "./icanhazdadjoke";
@@ -17,6 +19,7 @@ import { spaceflightNewsConnector } from "./spaceflightNews";
 import { spotifyConnector } from "./spotify";
 import { uselessFactsConnector } from "./uselessFacts";
 import { wikimediaOnThisDayConnector } from "./wikimediaOnThisDay";
+import { wiktionaryConnector } from "./wiktionary";
 import { zenQuotesConnector } from "./zenQuotes";
 
 export const CONNECTORS = {
@@ -36,6 +39,9 @@ export const CONNECTORS = {
   bbcNews: bbcNewsConnector,
   cleveland: clevelandConnector,
   nasaImages: nasaImagesConnector,
+  dictionaryApi: dictionaryApiConnector,
+  datamuse: datamuseConnector,
+  wiktionary: wiktionaryConnector,
 } satisfies Record<ConnectorId, Connector>;
 
 export function getConnector<K extends ConnectorId>(id: K): (typeof CONNECTORS)[K] {

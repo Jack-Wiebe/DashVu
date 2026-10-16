@@ -2,6 +2,7 @@ import type { WidgetKind, WidgetSize } from "@dashvu/validators";
 
 import { Icons } from "@/components/Icons";
 import CalendarWidget from "@/components/widgets/CalendarWidget";
+import DictionaryWidget from "@/components/widgets/DictionaryWidget";
 import DiscoverWidget from "@/components/widgets/DiscoverWidget";
 import FunPackWidget from "@/components/widgets/FunPackWidget";
 import GenerativeArtWidget from "@/components/widgets/GenerativeArtWidget";
@@ -82,6 +83,14 @@ export const WIDGET_REGISTRY: Record<WidgetKind, WidgetDefinition> = {
     Type: DiscoverWidget,
     Icon: Icons.discover,
     defaultTitle: "Discover",
+    defaultSize: "md",
+    sizes: ["sm", "md", "lrg"],
+  },
+  dictionary: {
+    kind: "dictionary",
+    Type: DictionaryWidget,
+    Icon: Icons.dictionary,
+    defaultTitle: "Dictionary",
     defaultSize: "md",
     sizes: ["sm", "md", "lrg"],
   },

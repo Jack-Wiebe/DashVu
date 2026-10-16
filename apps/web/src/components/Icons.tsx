@@ -10,6 +10,7 @@ import {
   Palette,
   Newspaper,
   Telescope,
+  BookA,
 } from "lucide-react";
 
 export const Icons = {
@@ -44,4 +45,5 @@ export const Icons = {
   canvas: (props: LucideProps) => <Palette {...props} />,
   news: (props: LucideProps) => <Newspaper {...props} />,
   discover: (props: LucideProps) => <Telescope {...props} />,
+  dictionary: (props: LucideProps) => <BookA {...props} />,
 };

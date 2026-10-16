@@ -131,6 +131,14 @@ defaultSize, sizes }`); `Widget.tsx` resolves the component/icon from there. The
 - Server data access goes through tRPC routers in `packages/api` (`appRouter`); the Next handler lives
   at `apps/web/src/app/api/trpc/[trpc]/route.ts` and the client hooks in
   `apps/web/src/lib/trpc/client.tsx`.
+- Keyless data widgets read through the connector registry (`packages/api/src/connectors/registry.ts`,
+  `getConnector(id).invoke(...)`): one connector per source, registered in `CONNECTORS` and mirrored in
+  `connectorIdSchema`. The `dictionary` widget composes the `dictionaryApi` connector
+  (definitions/phonetics, dictionaryapi.dev) with `datamuse` (synonyms/antonyms) via the `dictionary`
+  router; when `dictionaryApi` is slow/unavailable the router falls back to the reliable
+  `wiktionary` connector (Wikimedia REST, definitions only), so lookups still resolve. Its Word of the
+  Day is picked deterministically from `WORD_OF_THE_DAY` in `@dashvu/core`. Outbound requests via
+  `fetchWithRetry` take an optional `timeoutMs` (AbortController) so a dead origin fails fast.
 - When overriding `authorization` on a provider whose default is a **string** (e.g. Spotify:
   `authorization: "https://accounts.spotify.com/authorize?scope=..."`), you must re-specify `url`, or
   Auth.js's deep-merge replaces the string with `{}` and drops the endpoint (causes `TypeError: Invalid URL`

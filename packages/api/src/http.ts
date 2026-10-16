@@ -4,9 +4,10 @@ const DEFAULT_USER_AGENT = "DashVu/0.1 (+https://dashvu.app; contact: maintainer
 
 export const USER_AGENT = process.env.DASHVU_USER_AGENT?.trim() || DEFAULT_USER_AGENT;
 
-const RETRY_STATUS = new Set([429, 502, 503, 504]);
+const RETRY_STATUS = new Set([429, 502, 503, 504, 522]);
 const DEFAULT_RETRIES = 2;
 const MAX_RETRY_DELAY_MS = 5000;
+const DEFAULT_TIMEOUT_MS = 15000;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -29,9 +30,9 @@ function retryDelayMs(response: Response | null, attempt: number): number {
 
 export async function fetchWithRetry(
   input: string | URL,
-  init: RequestInit & { retries?: number } = {}
+  init: RequestInit & { retries?: number; timeoutMs?: number } = {}
 ): Promise<Response> {
-  const { retries = DEFAULT_RETRIES, headers, ...rest } = init;
+  const { retries = DEFAULT_RETRIES, timeoutMs = DEFAULT_TIMEOUT_MS, headers, ...rest } = init;
   const mergedHeaders = new Headers(headers);
   if (!mergedHeaders.has("user-agent")) {
     mergedHeaders.set("user-agent", USER_AGENT);
@@ -39,8 +40,15 @@ export async function fetchWithRetry(
 
   let lastError: unknown;
   for (let attempt = 0; attempt <= retries; attempt++) {
+    const controller = new AbortController();
+    const timer = timeoutMs > 0 ? setTimeout(() => controller.abort(), timeoutMs) : null;
+
     try {
-      const response = await fetch(input, { ...rest, headers: mergedHeaders });
+      const response = await fetch(input, {
+        ...rest,
+        headers: mergedHeaders,
+        signal: controller.signal,
+      });
       if (RETRY_STATUS.has(response.status) && attempt < retries) {
         await sleep(retryDelayMs(response, attempt));
         continue;
@@ -52,6 +60,8 @@ export async function fetchWithRetry(
         await sleep(retryDelayMs(null, attempt));
         continue;
       }
+    } finally {
+      if (timer) clearTimeout(timer);
     }
   }
 

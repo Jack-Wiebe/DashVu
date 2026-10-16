@@ -42,16 +42,16 @@ const Dashboard = () => {
   return (
     <div className="py-8">
       {activeLoading ? (
-        <div className="grid grid-cols-1 gap-8 text-slate-100 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-8 text-foreground md:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 3 }).map((_, index) => (
             <div
               key={index}
-              className="h-96 animate-pulse rounded-md border border-zinc-800 bg-zinc-800/40"
+              className="h-96 animate-pulse rounded-md border border-border bg-muted/40"
             />
           ))}
         </div>
       ) : widgets.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-2 rounded-md border border-dashed border-zinc-700 p-10 text-center text-sm text-slate-300">
+        <div className="flex flex-col items-center justify-center gap-2 rounded-md border border-dashed border-border p-10 text-center text-sm text-foreground/80">
           <p>No widgets yet.</p>
           <p>
             {editMode
@@ -65,7 +65,7 @@ const Dashboard = () => {
             items={widgets.map((widget) => widget.id)}
             strategy={rectSortingStrategy}
           >
-            <div className="grid grid-cols-1 gap-8 text-slate-100 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-8 text-foreground md:grid-cols-2 lg:grid-cols-3">
               {widgets.map((widget, index) => (
                 <SortableWidget
                   key={widget.id}

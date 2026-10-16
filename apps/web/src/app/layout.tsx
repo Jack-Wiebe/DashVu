@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import { createCaller, createContext } from "@dashvu/api";
 import { cn } from "@/lib/utils";
+import { DEFAULT_THEME, themeClassName } from "@/lib/themes";
 import NavBar from "@/components/NavBar";
 import { DashboardsProvider } from "@/components/DashboardsProvider";
+import { PreferencesProvider } from "@/components/PreferencesProvider";
+import { SettingsProvider } from "@/components/SettingsDrawer";
 import { Toaster } from "@/components/ui/toaster";
 import { Inter } from "next/font/google";
 import "@/styles/globals.css";
@@ -22,23 +25,31 @@ export const dynamic = "force-dynamic";
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
+  const caller = session ? createCaller(createContext({ session: { user: session.user } })) : null;
 
-  const bootstrap = session
-    ? await createCaller(createContext({ session: { user: session.user } })).dashboard.bootstrap()
-    : null;
+  const bootstrap = caller ? await caller.dashboard.bootstrap() : null;
+  const preferences = caller ? await caller.user.getPreferences() : null;
+  const theme = preferences?.theme ?? DEFAULT_THEME;
 
   return (
-    <html lang="en" className={cn("bg-black antialiased", inter.className)}>
-      <body className="min-h-screen pt-14 bg-slate-700 antialiased">
+    <html lang="en" className={cn(themeClassName(theme), "antialiased", inter.className)}>
+      <body className="min-h-screen pt-14 bg-background text-foreground antialiased">
         <SessionProvider session={session}>
           <TRPCProvider>
-            <DashboardsProvider initial={bootstrap}>
-              <NavBar />
+            <PreferencesProvider
+              initialTheme={theme}
+              initialSettings={preferences?.settings ?? null}
+            >
+              <DashboardsProvider initial={bootstrap}>
+                <SettingsProvider>
+                  <NavBar />
 
-              <div className="container max-w-screen-2xl h-full">{children}</div>
+                  <div className="container max-w-screen-2xl h-full">{children}</div>
 
-              <Toaster />
-            </DashboardsProvider>
+                  <Toaster />
+                </SettingsProvider>
+              </DashboardsProvider>
+            </PreferencesProvider>
           </TRPCProvider>
         </SessionProvider>
       </body>

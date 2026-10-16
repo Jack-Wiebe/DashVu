@@ -69,7 +69,7 @@ const NewsWidget: React.FC<WidgetComponentProps> = ({ className, settings, onSet
   return (
     <div className={cn(className, "flex h-full flex-col gap-2")}>
       <div className="flex items-center gap-1">
-        <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto rounded-md bg-zinc-900/60 p-0.5">
+        <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto rounded-md bg-muted/60 p-0.5">
           {SOURCES.map((entry) => (
             <button
               key={entry.id}
@@ -79,8 +79,8 @@ const NewsWidget: React.FC<WidgetComponentProps> = ({ className, settings, onSet
               className={cn(
                 "shrink-0 whitespace-nowrap rounded px-2 py-1 text-xs font-medium transition-colors",
                 entry.id === prefs.source
-                  ? "bg-zinc-700 text-zinc-100"
-                  : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+                  ? "bg-accent text-foreground"
+                  : "text-muted-foreground hover:bg-accent hover:text-foreground"
               )}
             >
               {entry.label}
@@ -110,7 +110,7 @@ const NewsWidget: React.FC<WidgetComponentProps> = ({ className, settings, onSet
 
           {settingsOpen ? (
             <div className={cn("absolute right-0 top-full z-30 mt-1 w-32 p-1", menuSurfaceClass)}>
-              <p className="px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-slate-500">
+              <p className="px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                 Headlines
               </p>
               {LIMITS.map((value) => (
@@ -118,7 +118,7 @@ const NewsWidget: React.FC<WidgetComponentProps> = ({ className, settings, onSet
                   key={value}
                   type="button"
                   onClick={() => selectLimit(value)}
-                  className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-zinc-100 transition-colors hover:bg-zinc-800"
+                  className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-foreground transition-colors hover:bg-accent"
                 >
                   <Check className={cn("h-3.5 w-3.5", prefs.limit !== value && "opacity-0")} />
                   {value}
@@ -134,20 +134,20 @@ const NewsWidget: React.FC<WidgetComponentProps> = ({ className, settings, onSet
           <ul className="space-y-2">
             {Array.from({ length: Math.min(prefs.limit, 6) }).map((_, index) => (
               <li key={index} className="space-y-1.5">
-                <div className="h-3 w-full animate-pulse rounded bg-zinc-800" />
-                <div className="h-2.5 w-1/3 animate-pulse rounded bg-zinc-800" />
+                <div className="h-3 w-full animate-pulse rounded bg-muted" />
+                <div className="h-2.5 w-1/3 animate-pulse rounded bg-muted" />
               </li>
             ))}
           </ul>
         ) : query.isError ? (
           <div className="m-auto flex flex-col items-center gap-2 text-center">
-            <p className="text-sm text-slate-500">Couldn&apos;t load headlines right now.</p>
+            <p className="text-sm text-muted-foreground">Couldn&apos;t load headlines right now.</p>
             <Button size="xs" variant="outline" onClick={() => void query.refetch()}>
               Try again
             </Button>
           </div>
         ) : items.length === 0 ? (
-          <p className="m-auto text-sm text-slate-500">No headlines available.</p>
+          <p className="m-auto text-sm text-muted-foreground">No headlines available.</p>
         ) : (
           <ol className="flex flex-col gap-0.5">
             {items.map((item, index) => (
@@ -156,17 +156,17 @@ const NewsWidget: React.FC<WidgetComponentProps> = ({ className, settings, onSet
                   href={item.url}
                   target="_blank"
                   rel="noreferrer"
-                  className="group flex gap-2 rounded px-1 py-1.5 transition-colors hover:bg-zinc-800/60"
+                  className="group flex gap-2 rounded px-1 py-1.5 transition-colors hover:bg-accent/60"
                 >
-                  <span className="w-4 shrink-0 pt-0.5 text-right text-xs tabular-nums text-slate-500">
+                  <span className="w-4 shrink-0 pt-0.5 text-right text-xs tabular-nums text-muted-foreground">
                     {index + 1}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="flex items-start gap-1 text-sm text-slate-100 group-hover:text-white">
+                    <span className="flex items-start gap-1 text-sm text-foreground group-hover:text-white">
                       <span className="min-w-0 flex-1">{item.title}</span>
-                      <ExternalLink className="mt-0.5 h-3 w-3 shrink-0 text-slate-600 opacity-0 transition-opacity group-hover:opacity-100" />
+                      <ExternalLink className="mt-0.5 h-3 w-3 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
                     </span>
-                    <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-slate-500">
+                    <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground">
                       {item.site ? <span className="truncate">{item.site}</span> : null}
                       {typeof item.points === "number" ? (
                         <span className="inline-flex items-center gap-0.5">

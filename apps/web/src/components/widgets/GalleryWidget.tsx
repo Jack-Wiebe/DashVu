@@ -289,7 +289,7 @@ const GalleryWidget: React.FC<WidgetComponentProps> = ({ className }) => {
                       <DropdownMenuItem
                         key={id}
                         onSelect={() => onFilterSelect(id)}
-                        className={selectedFilterId === id ? "bg-zinc-800" : ""}
+                        className={selectedFilterId === id ? "bg-muted" : ""}
                       >
                         {spec.label}
                       </DropdownMenuItem>

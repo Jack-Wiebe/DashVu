@@ -83,10 +83,10 @@ export const dashboards = pgTable("dashboard", {
 });
 
 /**
- * A per-user, per-kind container that owns widget content (and, when a widget
- * opts in via `shareSettings`, its settings). Widgets that point at the same
- * group share state across dashboards; the default group makes every widget of
- * a kind shared unless it is pointed at an independent/linked group.
+ * A per-user, per-kind widget instance. It owns the widget's display name, its
+ * settings, and its content. Widgets that point at the same group share all of
+ * that across dashboards; the default group makes every widget of a kind shared
+ * until it is pointed at another instance.
  */
 export const widgetGroups = pgTable(
   "widgetGroup",
@@ -112,6 +112,11 @@ export const widgetGroups = pgTable(
   ]
 );
 
+/**
+ * A widget placement: an instance (`groupId`) shown on a dashboard. Layout
+ * (`position`, `size`) lives here because the same instance can be placed
+ * differently on each dashboard; everything else lives on the instance.
+ */
 export const widgets = pgTable("widget", {
   id: text("id")
     .primaryKey()
@@ -123,11 +128,8 @@ export const widgets = pgTable("widget", {
     .notNull()
     .references(() => widgetGroups.id, { onDelete: "cascade" }),
   kind: text("kind").notNull(),
-  title: text("title").notNull(),
   position: integer("position").notNull().default(0),
   size: text("size").notNull().default("lg:col-span-1"),
-  settings: jsonb("settings").$type<Record<string, unknown>>(),
-  shareSettings: boolean("shareSettings").notNull().default(false),
   createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
 });
 
@@ -136,6 +138,7 @@ export const userPreferences = pgTable("userPreferences", {
     .primaryKey()
     .references(() => users.id, { onDelete: "cascade" }),
   theme: text("theme").notNull().default("dark"),
+  settings: jsonb("settings").$type<Record<string, unknown>>(),
   lastActiveDeviceId: text("lastActiveDeviceId"),
   activeDashboardId: text("activeDashboardId").references(() => dashboards.id, {
     onDelete: "set null",

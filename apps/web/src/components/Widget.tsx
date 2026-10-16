@@ -10,7 +10,8 @@ const Widget: React.FC<{
   style?: React.CSSProperties;
   innerRef?: React.Ref<HTMLElement>;
   onSettingsChange?: (settings: Record<string, unknown>) => void;
-}> = ({ config, actions, style, innerRef, onSettingsChange }) => {
+  pending?: boolean;
+}> = ({ config, actions, style, innerRef, onSettingsChange, pending }) => {
   const definition = WIDGET_REGISTRY[config.kind];
 
   if (!definition) {
@@ -19,7 +20,7 @@ const Widget: React.FC<{
         ref={innerRef}
         style={style}
         className={cn(
-          "flex flex-col items-center justify-center rounded-md border border-dashed border-zinc-700 p-4 text-sm text-slate-300",
+          "flex flex-col items-center justify-center rounded-md border border-dashed border-border p-4 text-sm text-foreground/80",
           WIDGET_SIZE_CLASSES[config.size]
         )}
       >
@@ -35,7 +36,7 @@ const Widget: React.FC<{
       ref={innerRef}
       style={style}
       className={cn(
-        "flex flex-col rounded-md border border-zinc-800 p-4",
+        "flex flex-col rounded-md border border-border p-4",
         WIDGET_SIZE_CLASSES[config.size]
       )}
     >
@@ -46,12 +47,19 @@ const Widget: React.FC<{
       </header>
 
       <div className="min-h-0 flex-1">
-        <Type
-          widgetId={config.id}
-          className="h-full"
-          settings={config.settings}
-          onSettingsChange={onSettingsChange}
-        />
+        {pending ? (
+          <div className="flex h-full flex-col gap-2">
+            <div className="h-4 w-24 animate-pulse rounded bg-muted" />
+            <div className="min-h-0 flex-1 animate-pulse rounded bg-muted/60" />
+          </div>
+        ) : (
+          <Type
+            widgetId={config.id}
+            className="h-full"
+            settings={config.settings}
+            onSettingsChange={onSettingsChange}
+          />
+        )}
       </div>
     </section>
   );

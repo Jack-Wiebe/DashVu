@@ -18,7 +18,9 @@ import { Switch } from "../ui/switch";
 const WeatherRadar = dynamic(() => import("./WeatherRadar"), {
   ssr: false,
   loading: () => (
-    <div className="flex flex-1 items-center justify-center text-slate-400">Loading radar…</div>
+    <div className="flex flex-1 items-center justify-center text-muted-foreground">
+      Loading radar…
+    </div>
   ),
 });
 
@@ -157,7 +159,7 @@ const WeatherWidget: React.FC<WidgetComponentProps> = ({
   return (
     <div className={cn(className, "flex flex-col gap-3 text-sm")}>
       <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-1 text-xs text-slate-400">
+        <div className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
           <MapPin className="h-3.5 w-3.5 shrink-0" />
           <span className="truncate">{location.label}</span>
         </div>
@@ -184,10 +186,10 @@ const WeatherWidget: React.FC<WidgetComponentProps> = ({
         </div>
       </div>
 
-      <div className="flex items-center gap-2 text-xs text-slate-400">
-        <span className={cn(!radarView && "text-slate-200")}>Week</span>
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <span className={cn(!radarView && "text-foreground/80")}>Week</span>
         <Switch checked={radarView} onCheckedChange={setRadarView} aria-label="Toggle radar view" />
-        <span className={cn(radarView && "text-slate-200")}>Radar</span>
+        <span className={cn(radarView && "text-foreground/80")}>Radar</span>
       </div>
 
       {radarView ? (
@@ -197,9 +199,11 @@ const WeatherWidget: React.FC<WidgetComponentProps> = ({
           className="min-h-0 flex-1"
         />
       ) : overview.isLoading ? (
-        <div className="flex flex-1 items-center justify-center text-slate-400">Loading…</div>
+        <div className="flex flex-1 items-center justify-center text-muted-foreground">
+          Loading…
+        </div>
       ) : overview.isError || !overview.data ? (
-        <div className="flex flex-1 items-center justify-center text-center text-slate-400">
+        <div className="flex flex-1 items-center justify-center text-center text-muted-foreground">
           Could not load weather.
         </div>
       ) : (
@@ -208,23 +212,23 @@ const WeatherWidget: React.FC<WidgetComponentProps> = ({
             <p className="text-4xl font-light">
               {Math.round(overview.data.current.temperatureC ?? 0)}°C
             </p>
-            <p className="text-slate-300">
+            <p className="text-foreground/80">
               {describeWeatherCode(overview.data.current.weatherCode)}
             </p>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-muted-foreground">
               Wind {Math.round(overview.data.current.windSpeedKph ?? 0)} km/h
             </p>
           </div>
 
-          <ul className="grid grid-cols-7 gap-1 border-t border-zinc-800 pt-2 text-xs">
+          <ul className="grid grid-cols-7 gap-1 border-t border-border pt-2 text-xs">
             {overview.data.daily.map((day) => {
               const Icon = weatherIconForCode(day.weatherCode);
               return (
                 <li key={day.date} className="flex flex-col items-center gap-1">
-                  <span className="text-slate-400">{weekday(day.date)}</span>
+                  <span className="text-muted-foreground">{weekday(day.date)}</span>
                   <Icon className="h-4 w-4" />
-                  <span className="text-slate-200">{Math.round(day.tempMaxC ?? 0)}°</span>
-                  <span className="text-slate-500">{Math.round(day.tempMinC ?? 0)}°</span>
+                  <span className="text-foreground/80">{Math.round(day.tempMaxC ?? 0)}°</span>
+                  <span className="text-muted-foreground">{Math.round(day.tempMinC ?? 0)}°</span>
                 </li>
               );
             })}
@@ -239,7 +243,7 @@ const WeatherWidget: React.FC<WidgetComponentProps> = ({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search a city…"
-              className="min-w-0 flex-1 rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-100 outline-none focus:border-zinc-500"
+              className="min-w-0 flex-1 rounded border border-border bg-card px-2 py-1 text-xs text-foreground outline-none focus:border-ring"
             />
             <Button type="submit" size="xs" variant="outline">
               <Search className="h-3.5 w-3.5" />
@@ -258,7 +262,7 @@ const WeatherWidget: React.FC<WidgetComponentProps> = ({
                   <button
                     type="button"
                     onClick={() => selectLocation(result)}
-                    className="w-full rounded-sm px-2 py-1 text-left text-xs text-zinc-200 transition-colors hover:bg-zinc-800"
+                    className="w-full rounded-sm px-2 py-1 text-left text-xs text-foreground/80 transition-colors hover:bg-accent"
                   >
                     {[result.name, result.admin1, result.country].filter(Boolean).join(", ")}
                   </button>

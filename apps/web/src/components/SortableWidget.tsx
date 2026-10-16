@@ -2,10 +2,11 @@
 
 import { useSortable } from "@dnd-kit/sortable";
 import type { WidgetSize } from "@dashvu/validators";
-import { ChevronDown, ChevronUp, GripVertical, Maximize2, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, GripVertical, Maximize2, Settings, Trash2 } from "lucide-react";
 
 import { WIDGET_REGISTRY } from "@/lib/widget-registry";
 import type { WidgetConfig } from "@/types/widget";
+import { useSettings } from "./SettingsDrawer";
 import Widget from "./Widget";
 
 interface SortableWidgetProps {
@@ -31,6 +32,7 @@ const SortableWidget = ({
   onResize,
   onSettingsChange,
 }: SortableWidgetProps) => {
+  const { openWidgetSettings } = useSettings();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: widget.id,
   });
@@ -43,6 +45,7 @@ const SortableWidget = ({
     <Widget
       config={widget}
       innerRef={setNodeRef}
+      pending={!widget.groupId}
       onSettingsChange={(settings) => onSettingsChange(widget.id, settings)}
       style={{
         transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
@@ -57,7 +60,7 @@ const SortableWidget = ({
               type="button"
               aria-label="Drag to reorder"
               disabled={saving}
-              className="touch-none cursor-grab rounded p-1 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-100 active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-30"
+              className="touch-none cursor-grab rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-30"
               {...attributes}
               {...listeners}
             >
@@ -68,7 +71,7 @@ const SortableWidget = ({
               aria-label="Move widget up"
               disabled={index === 0 || saving}
               onClick={() => onMove(index, -1)}
-              className="rounded p-1 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-100 disabled:opacity-30"
+              className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-30"
             >
               <ChevronUp className="h-4 w-4" />
             </button>
@@ -77,7 +80,7 @@ const SortableWidget = ({
               aria-label="Move widget down"
               disabled={index === total - 1 || saving}
               onClick={() => onMove(index, 1)}
-              className="rounded p-1 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-100 disabled:opacity-30"
+              className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-30"
             >
               <ChevronDown className="h-4 w-4" />
             </button>
@@ -87,16 +90,25 @@ const SortableWidget = ({
               title={`Size: ${widget.size} — click to change`}
               disabled={saving || !canResize}
               onClick={() => onResize(widget.id, nextSize)}
-              className="rounded p-1 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-100 disabled:opacity-30"
+              className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-30"
             >
               <Maximize2 className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              aria-label="Widget settings"
+              disabled={saving}
+              onClick={() => openWidgetSettings(widget.id)}
+              className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-30"
+            >
+              <Settings className="h-4 w-4" />
             </button>
             <button
               type="button"
               aria-label="Remove widget"
               disabled={saving}
               onClick={() => onRemove(widget.id)}
-              className="rounded p-1 text-zinc-400 transition-colors hover:bg-red-600/20 hover:text-red-400 disabled:opacity-30"
+              className="rounded p-1 text-muted-foreground transition-colors hover:bg-red-600/20 hover:text-red-400 disabled:opacity-30"
             >
               <Trash2 className="h-4 w-4" />
             </button>

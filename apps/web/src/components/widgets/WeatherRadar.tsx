@@ -143,7 +143,9 @@ const WeatherRadar = ({ latitude, longitude, className }: WeatherRadarProps) => 
 
   if (radar.isLoading) {
     return (
-      <div className={cn(className, "flex flex-1 items-center justify-center text-slate-400")}>
+      <div
+        className={cn(className, "flex flex-1 items-center justify-center text-muted-foreground")}
+      >
         Loading radar…
       </div>
     );
@@ -151,7 +153,9 @@ const WeatherRadar = ({ latitude, longitude, className }: WeatherRadarProps) => 
 
   if (radar.isError || !radar.data || total === 0) {
     return (
-      <div className={cn(className, "flex flex-1 items-center justify-center text-slate-400")}>
+      <div
+        className={cn(className, "flex flex-1 items-center justify-center text-muted-foreground")}
+      >
         Radar unavailable.
       </div>
     );
@@ -202,13 +206,13 @@ const WeatherRadar = ({ latitude, longitude, className }: WeatherRadarProps) => 
         </MapContainer>
 
         {!ready ? (
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/30 text-xs text-slate-200">
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/30 text-xs text-foreground/80">
             Loading radar…
           </div>
         ) : null}
       </div>
 
-      <div className="mt-2 flex flex-col gap-1 text-xs text-slate-400">
+      <div className="mt-2 flex flex-col gap-1 text-xs text-muted-foreground">
         <div className="flex items-center gap-2">
           <Button size="xs" variant="ghost" onClick={() => setPlaying((value) => !value)}>
             {playing ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}

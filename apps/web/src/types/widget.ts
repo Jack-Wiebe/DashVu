@@ -16,6 +16,7 @@ export interface WidgetConfig {
   title: string;
   size: WidgetSize;
   settings: Record<string, unknown> | null;
+  groupId?: string;
 }
 
 export interface WidgetDefinition {

@@ -100,7 +100,7 @@ const CalendarViews = ({
             role="dialog"
             aria-modal="true"
             aria-label="Event details"
-            className="max-h-full w-full max-w-xs overflow-auto rounded-md border border-zinc-700 bg-zinc-900 p-4 text-zinc-100 shadow-xl"
+            className="max-h-full w-full max-w-xs overflow-auto rounded-md border border-border bg-card p-4 text-foreground shadow-xl"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-2">
@@ -109,16 +109,16 @@ const CalendarViews = ({
                 type="button"
                 aria-label="Close"
                 onClick={() => setSelected(null)}
-                className="shrink-0 rounded p-1 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
+                className="shrink-0 rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            <p className="mt-1 text-xs text-zinc-400">{formatWhen(selected)}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{formatWhen(selected)}</p>
 
             {selected.location ? (
-              <p className="mt-2 flex items-start gap-1.5 text-xs text-zinc-300">
+              <p className="mt-2 flex items-start gap-1.5 text-xs text-foreground/80">
                 <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                 <span>{selected.location}</span>
               </p>

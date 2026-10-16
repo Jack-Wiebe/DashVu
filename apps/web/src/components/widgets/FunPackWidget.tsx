@@ -48,20 +48,22 @@ const ItemCard: React.FC<{ label: string; children: React.ReactNode; className?:
   children,
   className,
 }) => (
-  <div className={cn("rounded-md border border-zinc-800 bg-zinc-900/40 p-3", className)}>
-    <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-slate-500">{label}</p>
+  <div className={cn("rounded-md border border-border bg-muted/40 p-3", className)}>
+    <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+      {label}
+    </p>
     {children}
   </div>
 );
 
 const ItemError: React.FC = () => (
-  <p className="text-xs italic text-slate-500">Couldn&apos;t load this right now.</p>
+  <p className="text-xs italic text-muted-foreground">Couldn&apos;t load this right now.</p>
 );
 
 const ItemSkeleton: React.FC = () => (
   <div className="space-y-1.5">
-    <div className="h-3 w-full animate-pulse rounded bg-zinc-800" />
-    <div className="h-3 w-2/3 animate-pulse rounded bg-zinc-800" />
+    <div className="h-3 w-full animate-pulse rounded bg-muted" />
+    <div className="h-3 w-2/3 animate-pulse rounded bg-muted" />
   </div>
 );
 
@@ -114,7 +116,7 @@ const FunPackWidget: React.FC<WidgetComponentProps> = ({
                   key={key}
                   type="button"
                   onClick={() => toggle(key)}
-                  className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-zinc-100 transition-colors hover:bg-zinc-800"
+                  className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-foreground transition-colors hover:bg-accent"
                 >
                   <Check className={cn("h-3.5 w-3.5", !prefs[key] && "opacity-0")} />
                   {ITEM_LABELS[key]}
@@ -127,7 +129,7 @@ const FunPackWidget: React.FC<WidgetComponentProps> = ({
 
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-1">
         {visibleCount === 0 ? (
-          <p className="m-auto text-sm text-slate-500">
+          <p className="m-auto text-sm text-muted-foreground">
             All items are hidden. Use the settings button to show some.
           </p>
         ) : null}
@@ -138,8 +140,8 @@ const FunPackWidget: React.FC<WidgetComponentProps> = ({
               <ItemSkeleton />
             ) : quote?.status === "ok" ? (
               <div className="space-y-1">
-                <p className="text-sm text-slate-100">&ldquo;{quote.data.text}&rdquo;</p>
-                <p className="text-xs text-slate-400">
+                <p className="text-sm text-foreground">&ldquo;{quote.data.text}&rdquo;</p>
+                <p className="text-xs text-muted-foreground">
                   {quote.data.author ? `— ${quote.data.author}` : null}
                 </p>
               </div>
@@ -154,7 +156,7 @@ const FunPackWidget: React.FC<WidgetComponentProps> = ({
             {query.isLoading ? (
               <ItemSkeleton />
             ) : joke?.status === "ok" ? (
-              <p className="text-sm text-slate-100">{joke.data.text}</p>
+              <p className="text-sm text-foreground">{joke.data.text}</p>
             ) : (
               <ItemError />
             )}
@@ -166,7 +168,7 @@ const FunPackWidget: React.FC<WidgetComponentProps> = ({
             {query.isLoading ? (
               <ItemSkeleton />
             ) : fact?.status === "ok" ? (
-              <p className="text-sm text-slate-100">{fact.data.text}</p>
+              <p className="text-sm text-foreground">{fact.data.text}</p>
             ) : (
               <ItemError />
             )}
@@ -188,9 +190,9 @@ const FunPackWidget: React.FC<WidgetComponentProps> = ({
                   />
                 ) : null}
                 <div className="space-y-1">
-                  <p className="text-sm text-slate-100">{onThisDay.data.text}</p>
+                  <p className="text-sm text-foreground">{onThisDay.data.text}</p>
                   {onThisDay.data.year ? (
-                    <p className="text-xs text-slate-400">{onThisDay.data.year}</p>
+                    <p className="text-xs text-muted-foreground">{onThisDay.data.year}</p>
                   ) : null}
                 </div>
               </div>
@@ -205,7 +207,7 @@ const FunPackWidget: React.FC<WidgetComponentProps> = ({
         href="https://zenquotes.io/"
         target="_blank"
         rel="noreferrer"
-        className="flex items-center gap-1 text-[10px] text-slate-500 hover:text-slate-300"
+        className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground/80"
       >
         Quotes by ZenQuotes
         <ExternalLink className="h-3 w-3" />

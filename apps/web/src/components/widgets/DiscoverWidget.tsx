@@ -51,7 +51,7 @@ const DiscoverWidget: React.FC<WidgetComponentProps> = ({
   return (
     <div className={cn(className, "flex h-full flex-col gap-2")}>
       <div className="flex items-center gap-1">
-        <div className="flex items-center gap-1 rounded-md bg-zinc-900/60 p-0.5">
+        <div className="flex items-center gap-1 rounded-md bg-muted/60 p-0.5">
           {TABS.map((entry) => (
             <button
               key={entry.id}
@@ -60,8 +60,8 @@ const DiscoverWidget: React.FC<WidgetComponentProps> = ({
               className={cn(
                 "rounded px-2.5 py-1 text-xs font-medium transition-colors",
                 entry.id === tab
-                  ? "bg-zinc-700 text-zinc-100"
-                  : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+                  ? "bg-accent text-foreground"
+                  : "text-muted-foreground hover:bg-accent hover:text-foreground"
               )}
             >
               {entry.label}
@@ -85,20 +85,20 @@ const DiscoverWidget: React.FC<WidgetComponentProps> = ({
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         {active.isLoading ? (
           <div className="flex h-full flex-col gap-2">
-            <div className="min-h-0 flex-1 animate-pulse rounded bg-zinc-800/60" />
-            <div className="h-3 w-2/3 animate-pulse rounded bg-zinc-800" />
-            <div className="h-3 w-1/3 animate-pulse rounded bg-zinc-800" />
+            <div className="min-h-0 flex-1 animate-pulse rounded bg-muted/60" />
+            <div className="h-3 w-2/3 animate-pulse rounded bg-muted" />
+            <div className="h-3 w-1/3 animate-pulse rounded bg-muted" />
           </div>
         ) : active.isError ? (
           <div className="m-auto flex flex-col items-center gap-2 text-center">
-            <p className="text-sm text-slate-500">Couldn&apos;t load this right now.</p>
+            <p className="text-sm text-muted-foreground">Couldn&apos;t load this right now.</p>
             <Button size="xs" variant="outline" onClick={() => void active.refetch()}>
               Try again
             </Button>
           </div>
         ) : tab === "art" && art.data ? (
           <div className="flex min-h-0 flex-1 flex-col gap-2">
-            <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded bg-zinc-900/60">
+            <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded bg-muted/60">
               {art.data.imageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -109,15 +109,15 @@ const DiscoverWidget: React.FC<WidgetComponentProps> = ({
               ) : null}
             </div>
             <div className="shrink-0">
-              <p className="text-sm font-medium text-slate-100">{art.data.title}</p>
-              <p className="text-xs text-slate-400">
+              <p className="text-sm font-medium text-foreground">{art.data.title}</p>
+              <p className="text-xs text-muted-foreground">
                 {[art.data.artist, art.data.date].filter(Boolean).join(" · ")}
               </p>
               <a
                 href={art.data.url}
                 target="_blank"
                 rel="noreferrer"
-                className="mt-0.5 inline-flex items-center gap-1 text-[10px] text-slate-500 hover:text-slate-300"
+                className="mt-0.5 inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground/80"
               >
                 {art.data.source}
                 <ExternalLink className="h-3 w-3" />
@@ -126,7 +126,7 @@ const DiscoverWidget: React.FC<WidgetComponentProps> = ({
           </div>
         ) : tab === "space" && space.data ? (
           <div className="flex min-h-0 flex-1 flex-col gap-2">
-            <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded bg-zinc-900/60">
+            <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded bg-muted/60">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={space.data.imageUrl}
@@ -135,18 +135,20 @@ const DiscoverWidget: React.FC<WidgetComponentProps> = ({
               />
             </div>
             <div className="shrink-0">
-              <p className="text-sm font-medium text-slate-100">{space.data.title}</p>
-              <p className="text-xs text-slate-400">
+              <p className="text-sm font-medium text-foreground">{space.data.title}</p>
+              <p className="text-xs text-muted-foreground">
                 {[space.data.credit, formatDate(space.data.date)].filter(Boolean).join(" · ")}
               </p>
               {space.data.description ? (
-                <p className="mt-1 line-clamp-2 text-xs text-slate-400">{space.data.description}</p>
+                <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                  {space.data.description}
+                </p>
               ) : null}
               <a
                 href={space.data.url}
                 target="_blank"
                 rel="noreferrer"
-                className="mt-0.5 inline-flex items-center gap-1 text-[10px] text-slate-500 hover:text-slate-300"
+                className="mt-0.5 inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground/80"
               >
                 {space.data.source}
                 <ExternalLink className="h-3 w-3" />
@@ -154,7 +156,7 @@ const DiscoverWidget: React.FC<WidgetComponentProps> = ({
             </div>
           </div>
         ) : (
-          <p className="m-auto text-sm text-slate-500">Nothing to show today.</p>
+          <p className="m-auto text-sm text-muted-foreground">Nothing to show today.</p>
         )}
       </div>
     </div>

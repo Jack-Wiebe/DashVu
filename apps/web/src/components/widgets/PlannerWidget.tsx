@@ -110,12 +110,12 @@ const SortableItem = ({
         opacity: isDragging ? 0.5 : undefined,
         zIndex: isDragging ? 1 : undefined,
       }}
-      className="flex items-start gap-2 rounded-md border border-zinc-800 bg-zinc-900/40 px-2 py-1.5"
+      className="flex items-start gap-2 rounded-md border border-border bg-muted/40 px-2 py-1.5"
     >
       <button
         type="button"
         aria-label="Drag to reorder"
-        className="mt-0.5 cursor-grab touch-none text-zinc-500 transition-colors hover:text-zinc-300 active:cursor-grabbing"
+        className="mt-0.5 cursor-grab touch-none text-muted-foreground transition-colors hover:text-foreground active:cursor-grabbing"
         {...attributes}
         {...listeners}
       >
@@ -131,7 +131,7 @@ const SortableItem = ({
             "mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors",
             item.checked
               ? "border-emerald-500 bg-emerald-500 text-zinc-900"
-              : "border-zinc-600 hover:border-zinc-400"
+              : "border-muted-foreground hover:border-foreground"
           )}
         >
           {item.checked ? <Check className="h-3 w-3" /> : null}
@@ -149,13 +149,13 @@ const SortableItem = ({
               if (event.key === "Escape") onCancelEdit();
             }}
             onBlur={onCommitEdit}
-            className="w-full rounded bg-zinc-800 px-1.5 py-0.5 text-sm text-zinc-100 outline-none"
+            className="w-full rounded bg-muted px-1.5 py-0.5 text-sm text-foreground outline-none"
           />
         ) : (
           <p
             className={cn(
-              "break-words text-sm text-slate-100",
-              mode === "todos" && item.checked && "text-slate-500 line-through"
+              "break-words text-sm text-foreground",
+              mode === "todos" && item.checked && "text-muted-foreground line-through"
             )}
           >
             {item.text}
@@ -163,7 +163,7 @@ const SortableItem = ({
         )}
 
         {mode === "countdown" && item.date ? (
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-muted-foreground">
             {formatTarget(item.date)} · {formatRemaining(item.date)}
           </p>
         ) : null}
@@ -174,7 +174,7 @@ const SortableItem = ({
           type="button"
           aria-label="Edit"
           onClick={onStartEdit}
-          className="rounded p-1 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
+          className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
         >
           <Pencil className="h-3.5 w-3.5" />
         </button>
@@ -184,7 +184,7 @@ const SortableItem = ({
         type="button"
         aria-label="Delete"
         onClick={onRemove}
-        className="rounded p-1 text-zinc-500 transition-colors hover:bg-red-600/20 hover:text-red-400"
+        className="rounded p-1 text-muted-foreground transition-colors hover:bg-red-600/20 hover:text-red-400"
       >
         <Trash2 className="h-3.5 w-3.5" />
       </button>
@@ -326,7 +326,7 @@ const PlannerWidget = ({
 
   return (
     <div className={cn(className, "flex h-full flex-col gap-2")}>
-      <div className="flex items-center gap-1 rounded-md bg-zinc-900/60 p-0.5">
+      <div className="flex items-center gap-1 rounded-md bg-muted/60 p-0.5">
         {MODES.map((value) => (
           <button
             key={value}
@@ -335,8 +335,8 @@ const PlannerWidget = ({
             className={cn(
               "flex-1 rounded px-2 py-1 text-xs font-medium transition-colors",
               value === mode
-                ? "bg-zinc-700 text-zinc-100"
-                : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+                ? "bg-accent text-foreground"
+                : "text-muted-foreground hover:bg-accent hover:text-foreground"
             )}
           >
             {MODE_LABELS[value]}
@@ -355,14 +355,14 @@ const PlannerWidget = ({
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           placeholder={PLACEHOLDERS[mode]}
-          className="min-w-0 flex-1 rounded-md border border-zinc-800 bg-zinc-900/60 px-2 py-1.5 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-600"
+          className="min-w-0 flex-1 rounded-md border border-border bg-muted/60 px-2 py-1.5 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-ring"
         />
         {mode === "countdown" ? (
           <input
             type="datetime-local"
             value={dateDraft}
             onChange={(event) => setDateDraft(event.target.value)}
-            className="rounded-md border border-zinc-800 bg-zinc-900/60 px-2 py-1.5 text-sm text-zinc-100 outline-none focus:border-zinc-600"
+            className="rounded-md border border-border bg-muted/60 px-2 py-1.5 text-sm text-foreground outline-none focus:border-ring"
           />
         ) : null}
         <Button type="submit" size="xs" variant="ghost" aria-label="Add" disabled={!draft.trim()}>
@@ -371,7 +371,7 @@ const PlannerWidget = ({
       </form>
 
       {items.length === 0 ? (
-        <p className="m-auto px-2 text-center text-sm text-slate-500">
+        <p className="m-auto px-2 text-center text-sm text-muted-foreground">
           {query.isLoading ? "Loading…" : "Nothing here yet. Add your first item above."}
         </p>
       ) : (
@@ -408,7 +408,7 @@ const PlannerWidget = ({
         <button
           type="button"
           onClick={() => removeChecked.mutate({ widgetId, mode })}
-          className="self-start text-xs text-slate-500 transition-colors hover:text-slate-300"
+          className="self-start text-xs text-muted-foreground transition-colors hover:text-foreground/80"
         >
           Clear completed ({checkedCount})
         </button>

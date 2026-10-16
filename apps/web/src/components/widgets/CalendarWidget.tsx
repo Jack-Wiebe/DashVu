@@ -15,7 +15,7 @@ import type { CalendarEvent } from "./CalendarViews";
 
 const CalendarViews = dynamic(() => import("./CalendarViews"), {
   ssr: false,
-  loading: () => <div className="h-full w-full animate-pulse rounded bg-zinc-800" />,
+  loading: () => <div className="h-full w-full animate-pulse rounded bg-muted" />,
 });
 
 function parseDate(value: string, allDay: boolean) {

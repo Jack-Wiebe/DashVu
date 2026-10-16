@@ -105,17 +105,21 @@ defaultSize, sizes }`); `Widget.tsx` resolves the component/icon from there. The
   `DEFAULT_WIDGET_LAYOUT`, later ones start empty. Tab management (add/rename/delete/drag-reorder) is
   gated to edit mode; clicking a tab always switches.
 - Dashboard layout is persisted per user: the client edits it and auto-saves with `dashboard.saveLayout`.
-  `saveLayout` upserts by client-generated widget id scoped to the owner's dashboard. `widget.settings`
-  (jsonb) is reserved for future per-widget config.
-- **Widget state is shared across tabs via `widgetGroup`** (per user, per `kind`). Every widget points at
-  a group (`widget.groupId`, `ON DELETE CASCADE`); `saveLayout` resolves the owner's default group per
-  kind (`resolveGroupForKind` in `packages/api/src/groups.ts`) unless the client supplies a `groupId` it
-  owns, so all instances of a kind share content by default. `widgets.shareSettings` (opt-in) routes
-  `settings` onto `widgetGroup.settings` (single source of truth) instead of the widget; `get` returns
-  the effective settings. **Independent/linked instances (multiple groups per kind) are a model
-  capability only — no UI yet**; a settings window will set `groupId`/`shareSettings` through
-  `saveLayout` (no router change needed). Group defaults (and their content) persist after the last
-  widget is deleted.
+  `saveLayout` upserts by client-generated widget id scoped to the owner's dashboard and stores the
+  **placement** only: `kind`, `size`, `position`, `groupId`. `widgetGroups` (see below) owns all state.
+  It returns the resolved widgets (with `groupId`/`title`/`settings`) so the client can adopt the
+  server-assigned group right after adding a widget; `Widget.tsx` renders a pending body (and skips
+  mounting the widget component) until `widget.groupId` is known, so widget-scoped queries never race
+  the not-yet-inserted placement row.
+- **A `widgetGroup` is a widget _instance_** (per user, per `kind`): it owns the display `name`
+  (title), `settings` (jsonb), and any content. A `widget` row is only a **placement** on a dashboard
+  (position/size + `groupId`, `ON DELETE CASCADE`). Settings are **per-instance** (no per-placement or
+  global-per-kind settings); size/position stay per-placement. `saveLayout` resolves the owner's default
+  group per kind (`resolveGroupForKind` in `packages/api/src/groups.ts`, seeding the group name from the
+  client's `instanceName`) unless the client supplies a `groupId` it owns — so instances are reused/shared
+  across tabs by default. Instance management lives on `dashboard.listInstances`/`createInstance`/
+  `updateInstance`; `get` returns each widget's `title`/`settings` from its group. Instances (and their
+  content) persist after the last placement is deleted.
 - Widgets that own **content** (not just config) get a dedicated table keyed to `widgetGroup.id` with
   `ON DELETE CASCADE`; the `planner` widget uses `widgetItem` + the `planner` router. Widget components
   receive `widgetId` via `WidgetComponentProps` and call tRPC directly — such procedures resolve the
@@ -169,9 +173,13 @@ add Vitest/Playwright with tests colocated next to source. When adding a test sc
   handle-only drag + kept up/down buttons as fallback). Stage 3 added multiple dashboards (tabs) with
   DB-persisted active tab (`dashboard.bootstrap`/`list`/`get`/`create`/`rename`/`remove`/`reorder`/
   `setActive`, tab drag via `horizontalListSortingStrategy`, management gated to edit mode). Stage 4
-  introduced `widgetGroup` so widgets of a kind share state across tabs (see the sharing bullet above;
-  model/API only, no UI). Still TODO: export/import layout, per-widget settings panels (link/independent
-  instances + settings sharing).
+  introduced `widgetGroup` as the widget _instance_ (name/settings/content; placements are per-dashboard)
+  and a Settings drawer: `SettingsProvider`/`useSettings` (`SettingsDrawer.tsx`) exposes
+  `openAppSettings`/`openWidgetSettings(id)`; the widget panel (gear in `SortableWidget`) edits the
+  instance name/size and switches/creates instances, the app panel covers Account + Appearance.
+  Theming is a Light/Dark registry (`lib/themes.ts`) applied on `<html>` by `PreferencesProvider`
+  (theme + reduce-motion, persisted via `user.updatePreferences`). Still TODO: export/import layout,
+  richer per-widget settings fields.
 
 <!-- BEGIN:turborepo-agent-rules -->
 

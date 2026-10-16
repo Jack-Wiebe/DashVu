@@ -22,17 +22,22 @@ async function findDefaultGroup(userId: string, kind: string): Promise<string | 
 }
 
 /**
- * Resolve (find-or-create) the default widget group for a user and widget kind.
- * All widgets of a kind join this group by default, so they share content.
+ * Resolve (find-or-create) the default widget instance for a user and widget
+ * kind. All widgets of a kind join this instance by default, so they share the
+ * name, settings, and content. `name` is used only when the instance is created.
  */
-export async function resolveGroupForKind(userId: string, kind: string): Promise<string> {
+export async function resolveGroupForKind(
+  userId: string,
+  kind: string,
+  name?: string
+): Promise<string> {
   const existing = await findDefaultGroup(userId, kind);
   if (existing) return existing;
 
   try {
     const [created] = await db
       .insert(widgetGroups)
-      .values({ userId, kind, name: kind, isDefault: true })
+      .values({ userId, kind, name: name?.trim() || kind, isDefault: true })
       .returning();
 
     if (created) return created.id;

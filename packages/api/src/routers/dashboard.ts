@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { and, asc, eq, notInArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, notInArray, sql } from "drizzle-orm";
 
 import { dashboards, db, userPreferences, widgetGroups, widgets } from "@dashvu/db";
 import {
@@ -9,6 +9,9 @@ import {
   dashboardReorderSchema,
   DEFAULT_WIDGET_LAYOUT,
   saveLayoutSchema,
+  widgetInstanceCreateSchema,
+  widgetInstanceListSchema,
+  widgetInstanceUpdateSchema,
   type WidgetKind,
   type WidgetSize,
 } from "@dashvu/validators";
@@ -19,23 +22,20 @@ import { protectedProcedure, router } from "../trpc";
 function toWidget(row: {
   id: string;
   kind: string;
-  title: string;
   size: string;
   position: number;
-  settings: Record<string, unknown> | null;
-  shareSettings: boolean;
   groupId: string;
+  groupName: string;
   groupSettings: Record<string, unknown> | null;
 }) {
   return {
     id: row.id,
     kind: row.kind as WidgetKind,
-    title: row.title,
+    title: row.groupName,
     size: (row.size === "wide" ? "lrg" : row.size) as WidgetSize,
     position: row.position,
-    settings: row.shareSettings ? (row.groupSettings ?? null) : (row.settings ?? null),
+    settings: row.groupSettings ?? null,
     groupId: row.groupId,
-    shareSettings: row.shareSettings,
   };
 }
 
@@ -62,16 +62,14 @@ async function getDashboardWidgets(dashboardId: string) {
     .select({
       id: widgets.id,
       kind: widgets.kind,
-      title: widgets.title,
       size: widgets.size,
       position: widgets.position,
-      settings: widgets.settings,
-      shareSettings: widgets.shareSettings,
       groupId: widgets.groupId,
+      groupName: widgetGroups.name,
       groupSettings: widgetGroups.settings,
     })
     .from(widgets)
-    .leftJoin(widgetGroups, eq(widgets.groupId, widgetGroups.id))
+    .innerJoin(widgetGroups, eq(widgets.groupId, widgetGroups.id))
     .where(eq(widgets.dashboardId, dashboardId))
     .orderBy(widgets.position);
 
@@ -96,9 +94,8 @@ async function ensureDashboard(userId: string) {
       for (const item of DEFAULT_WIDGET_LAYOUT) {
         seeded.push({
           dashboardId: created.id,
-          groupId: await resolveGroupForKind(userId, item.kind),
+          groupId: await resolveGroupForKind(userId, item.kind, item.title),
           kind: item.kind,
-          title: item.title,
           size: item.size,
           position: item.position,
         });
@@ -182,6 +179,61 @@ export const dashboardRouter = router({
       widgets: await getDashboardWidgets(dashboard.id),
     };
   }),
+
+  listInstances: protectedProcedure
+    .input(widgetInstanceListSchema)
+    .query(async ({ ctx, input }) => {
+      return db
+        .select({
+          id: widgetGroups.id,
+          name: widgetGroups.name,
+          isDefault: widgetGroups.isDefault,
+        })
+        .from(widgetGroups)
+        .where(and(eq(widgetGroups.userId, ctx.session.user.id), eq(widgetGroups.kind, input.kind)))
+        .orderBy(desc(widgetGroups.isDefault), asc(widgetGroups.createdAt));
+    }),
+
+  createInstance: protectedProcedure
+    .input(widgetInstanceCreateSchema)
+    .mutation(async ({ ctx, input }) => {
+      const [created] = await db
+        .insert(widgetGroups)
+        .values({
+          userId: ctx.session.user.id,
+          kind: input.kind,
+          name: input.name ?? input.kind,
+          isDefault: false,
+        })
+        .returning();
+
+      if (!created) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Could not create instance",
+        });
+      }
+
+      return { id: created.id, name: created.name, isDefault: created.isDefault };
+    }),
+
+  updateInstance: protectedProcedure
+    .input(widgetInstanceUpdateSchema)
+    .mutation(async ({ ctx, input }) => {
+      const patch: { name?: string; settings?: Record<string, unknown> | null } = {};
+      if (input.name !== undefined) patch.name = input.name;
+      if (input.settings !== undefined) patch.settings = input.settings ?? null;
+      if (Object.keys(patch).length === 0) return { ok: true } as const;
+
+      await db
+        .update(widgetGroups)
+        .set({ ...patch, updatedAt: new Date() })
+        .where(
+          and(eq(widgetGroups.id, input.groupId), eq(widgetGroups.userId, ctx.session.user.id))
+        );
+
+      return { ok: true } as const;
+    }),
 
   create: protectedProcedure.input(dashboardCreateSchema).mutation(async ({ ctx, input }) => {
     const userId = ctx.session.user.id;
@@ -290,8 +342,6 @@ export const dashboardRouter = router({
       const rows = [];
 
       for (const widget of input.widgets) {
-        const shareSettings = widget.shareSettings ?? false;
-
         let groupId = widget.groupId;
         if (groupId) {
           const [owned] = await db
@@ -307,25 +357,15 @@ export const dashboardRouter = router({
             .limit(1);
           if (!owned) groupId = undefined;
         }
-        if (!groupId) groupId = await resolveGroupForKind(userId, widget.kind);
-
-        if (shareSettings) {
-          await db
-            .update(widgetGroups)
-            .set({ settings: widget.settings ?? null, updatedAt: new Date() })
-            .where(and(eq(widgetGroups.id, groupId), eq(widgetGroups.userId, userId)));
-        }
+        if (!groupId) groupId = await resolveGroupForKind(userId, widget.kind, widget.instanceName);
 
         rows.push({
           id: widget.id,
           dashboardId: dashboard.id,
           groupId,
           kind: widget.kind,
-          title: widget.title,
           size: widget.size,
           position: widget.position,
-          settings: shareSettings ? null : (widget.settings ?? null),
-          shareSettings,
         });
       }
 
@@ -337,11 +377,8 @@ export const dashboardRouter = router({
           set: {
             groupId: sql`excluded."groupId"`,
             kind: sql`excluded."kind"`,
-            title: sql`excluded."title"`,
             size: sql`excluded."size"`,
             position: sql`excluded."position"`,
-            settings: sql`excluded."settings"`,
-            shareSettings: sql`excluded."shareSettings"`,
           },
           where: sql`${widgets.dashboardId} = excluded."dashboardId"`,
         });
@@ -352,6 +389,6 @@ export const dashboardRouter = router({
       .set({ updatedAt: new Date() })
       .where(eq(dashboards.id, dashboard.id));
 
-    return { ok: true } as const;
+    return { ok: true, widgets: await getDashboardWidgets(dashboard.id) } as const;
   }),
 });

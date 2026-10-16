@@ -14,12 +14,8 @@ import { createWidget } from "@/lib/widget-registry";
 type Bootstrap = inferRouterOutputs<AppRouter>["dashboard"]["bootstrap"];
 export type DashboardSummary = Bootstrap["dashboards"][number];
 export type ActiveDashboard = Bootstrap["active"];
-export type DashboardWidget = Omit<
-  ActiveDashboard["widgets"][number],
-  "groupId" | "shareSettings"
-> & {
+export type DashboardWidget = Omit<ActiveDashboard["widgets"][number], "groupId"> & {
   groupId?: string;
-  shareSettings?: boolean;
 };
 
 interface DashboardsContextValue {
@@ -42,6 +38,9 @@ interface DashboardsContextValue {
   moveWidget: (index: number, direction: -1 | 1) => void;
   resizeWidget: (id: string, size: WidgetSize) => void;
   updateSettings: (id: string, settings: Record<string, unknown>) => void;
+  setWidgetInstance: (id: string, groupId: string) => void;
+  renameInstance: (groupId: string, name: string) => void;
+  createInstance: (kind: WidgetKind, name?: string) => Promise<{ id: string; name: string } | null>;
   handleDragEnd: (event: DragEndEvent) => void;
 }
 
@@ -93,6 +92,19 @@ export function DashboardsProvider({
     },
   });
 
+  const updateInstance = trpc.dashboard.updateInstance.useMutation({
+    onError: () => {
+      toast({
+        variant: "destructive",
+        title: "Could not save settings",
+        description: "Your changes were reverted.",
+      });
+      utils.dashboard.get.invalidate();
+    },
+  });
+
+  const createInstanceMutation = trpc.dashboard.createInstance.useMutation();
+
   const setActive = trpc.dashboard.setActive.useMutation({
     onError: () => utils.dashboard.list.invalidate(),
   });
@@ -121,13 +133,49 @@ export function DashboardsProvider({
   const active = activeQuery.data ?? null;
 
   const persist = (next: DashboardWidget[]) => {
-    if (!activeId) return;
+    if (!activeId) return Promise.resolve();
     const normalized = next.map((widget, index) => ({ ...widget, position: index }));
 
     utils.dashboard.get.setData({ id: activeId }, (prev) =>
       prev ? { ...prev, widgets: normalized as ActiveDashboard["widgets"] } : prev
     );
-    saveLayout.mutate({ dashboardId: activeId, widgets: normalized });
+
+    const promise = saveLayout
+      .mutateAsync({
+        dashboardId: activeId,
+        widgets: normalized.map((widget) => ({
+          id: widget.id,
+          kind: widget.kind,
+          size: widget.size,
+          position: widget.position,
+          groupId: widget.groupId,
+          instanceName: widget.groupId ? undefined : widget.title,
+        })),
+      })
+      .then((result) => {
+        const resolved = new Map(result.widgets.map((widget) => [widget.id, widget]));
+        utils.dashboard.get.setData({ id: activeId }, (prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            widgets: prev.widgets.map((widget) => {
+              const server = resolved.get(widget.id);
+              if (!server) return widget;
+              if (!widget.groupId) {
+                return {
+                  ...widget,
+                  groupId: server.groupId,
+                  title: server.title,
+                  settings: server.settings,
+                };
+              }
+              return { ...widget, groupId: server.groupId };
+            }) as ActiveDashboard["widgets"],
+          };
+        });
+      });
+    promise.catch(() => undefined);
+    return promise;
   };
 
   const value: DashboardsContextValue = {
@@ -208,7 +256,53 @@ export function DashboardsProvider({
       persist(widgets.map((widget) => (widget.id === id ? { ...widget, size } : widget)));
     },
     updateSettings: (id, settings) => {
-      persist(widgets.map((widget) => (widget.id === id ? { ...widget, settings } : widget)));
+      const target = widgets.find((widget) => widget.id === id);
+      if (!target?.groupId) return;
+      const { groupId } = target;
+
+      if (activeId) {
+        utils.dashboard.get.setData({ id: activeId }, (prev) =>
+          prev
+            ? {
+                ...prev,
+                widgets: prev.widgets.map((widget) =>
+                  widget.groupId === groupId ? { ...widget, settings } : widget
+                ),
+              }
+            : prev
+        );
+      }
+
+      updateInstance.mutate({ groupId, settings });
+    },
+    setWidgetInstance: (id, groupId) => {
+      persist(widgets.map((widget) => (widget.id === id ? { ...widget, groupId } : widget)))
+        .then(() => utils.dashboard.get.invalidate())
+        .catch(() => undefined);
+    },
+    renameInstance: (groupId, name) => {
+      if (activeId) {
+        utils.dashboard.get.setData({ id: activeId }, (prev) =>
+          prev
+            ? {
+                ...prev,
+                widgets: prev.widgets.map((widget) =>
+                  widget.groupId === groupId ? { ...widget, title: name } : widget
+                ),
+              }
+            : prev
+        );
+      }
+
+      updateInstance.mutate(
+        { groupId, name },
+        { onSuccess: () => utils.dashboard.listInstances.invalidate() }
+      );
+    },
+    createInstance: async (kind, name) => {
+      const created = await createInstanceMutation.mutateAsync(name ? { kind, name } : { kind });
+      await utils.dashboard.listInstances.invalidate();
+      return created ? { id: created.id, name: created.name } : null;
     },
     handleDragEnd: (event) => {
       const { active: dragged, over } = event;

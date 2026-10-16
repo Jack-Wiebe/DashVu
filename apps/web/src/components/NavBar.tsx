@@ -19,13 +19,14 @@ import {
   sortableKeyboardCoordinates,
   useSortable,
 } from "@dnd-kit/sortable";
-import { Check, MoreVertical, Pencil, Plus } from "lucide-react";
+import { Check, MoreVertical, Pencil, Plus, Settings } from "lucide-react";
 
 import { useOnClickOutside } from "@/hooks/use-on-click-outside";
 import { cn, menuSurfaceClass } from "@/lib/utils";
 import { WIDGET_KINDS, WIDGET_REGISTRY } from "@/lib/widget-registry";
 
 import { useDashboards, type DashboardSummary } from "./DashboardsProvider";
+import { useSettings } from "./SettingsDrawer";
 import { Icons } from "./Icons";
 import UserAuthButton from "./UserAuthButton";
 import { Button } from "./ui/Button";
@@ -84,7 +85,7 @@ const DashboardTab = ({
             onRenameCancel();
           }
         }}
-        className="w-28 rounded border border-zinc-500 bg-zinc-800 px-2 py-1 text-sm text-slate-100 outline-none focus:border-zinc-300"
+        className="w-28 rounded border border-input bg-muted px-2 py-1 text-sm text-foreground outline-none focus:border-ring"
       />
     );
   }
@@ -106,8 +107,8 @@ const DashboardTab = ({
         className={cn(
           "whitespace-nowrap rounded px-2 py-1 text-sm transition-colors",
           active
-            ? "bg-zinc-800 text-slate-100"
-            : "text-zinc-300 hover:bg-zinc-800/60 hover:text-slate-100",
+            ? "bg-muted text-foreground"
+            : "text-foreground/80 hover:bg-accent/60 hover:text-foreground",
           editMode && "touch-none cursor-grab active:cursor-grabbing"
         )}
         {...(editMode ? { ...attributes, ...listeners } : {})}
@@ -121,7 +122,7 @@ const DashboardTab = ({
             <button
               type="button"
               aria-label={`Options for ${dashboard.name}`}
-              className="rounded p-1 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
+              className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
             >
               <MoreVertical className="h-3.5 w-3.5" />
             </button>
@@ -212,7 +213,7 @@ const DashboardTabs = ({ listRef }: { listRef: RefObject<HTMLDivElement | null> 
             type="button"
             aria-label="Add dashboard"
             onClick={() => void startCreate()}
-            className="shrink-0 rounded p-1 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
+            className="shrink-0 rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           >
             <Plus className="h-4 w-4" />
           </button>
@@ -253,7 +254,7 @@ const AddWidgetMenu = () => {
                   addWidget(kind);
                   setOpen(false);
                 }}
-                className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-zinc-100 transition-colors hover:bg-zinc-800"
+                className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-foreground transition-colors hover:bg-accent"
               >
                 {Icon ? <Icon className="h-4 w-4" /> : null}
                 {definition.defaultTitle}
@@ -293,6 +294,7 @@ const EditToggle = () => {
 const NavBar = () => {
   const { data: session } = useSession();
   const { ready, editMode } = useDashboards();
+  const { openAppSettings } = useSettings();
   const signedIn = Boolean(session) && ready;
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -344,7 +346,7 @@ const NavBar = () => {
   }, [session, ready]);
 
   return (
-    <div className="fixed top-0 inset-x-0 h-14 bg-zinc-700 border-b border-zinc-900 z-[10] text-slate-100">
+    <div className="fixed top-0 inset-x-0 h-14 bg-background border-b border-border z-[10] text-foreground">
       <div
         ref={containerRef}
         className="container relative max-w-screen-2xl h-full mx-auto flex items-center gap-3"
@@ -367,7 +369,18 @@ const NavBar = () => {
         <div ref={controlsRef} className="ml-auto flex shrink-0 items-center gap-2">
           {signedIn && <EditToggle />}
           {signedIn && editMode && <AddWidgetMenu />}
-          <UserAuthButton />
+          {signedIn ? (
+            <button
+              type="button"
+              aria-label="Settings"
+              onClick={openAppSettings}
+              className="rounded p-1.5 text-foreground/80 transition-colors hover:bg-accent hover:text-foreground"
+            >
+              <Settings className="h-4 w-4" />
+            </button>
+          ) : (
+            <UserAuthButton />
+          )}
         </div>
       </div>
     </div>

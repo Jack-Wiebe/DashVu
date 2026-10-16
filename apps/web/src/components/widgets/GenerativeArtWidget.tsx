@@ -16,6 +16,7 @@ import {
 import { cn, menuSurfaceClass } from "@/lib/utils";
 import type { WidgetComponentProps } from "@/types/widget";
 
+import { usePreferences } from "../PreferencesProvider";
 import { Button } from "../ui/Button";
 
 interface CanvasSettings {
@@ -54,6 +55,7 @@ const GenerativeArtWidget: React.FC<WidgetComponentProps> = ({
   onSettingsChange,
 }) => {
   const config = readSettings(settings);
+  const { reduceMotion: reduceMotionPreference } = usePreferences();
   const [fallbackSeed] = useState(randomSeed);
   const seed = config.seed ?? fallbackSeed;
 
@@ -154,7 +156,13 @@ const GenerativeArtWidget: React.FC<WidgetComponentProps> = ({
   }, [config.style, config.palette, seed, size.width, size.height]);
 
   useEffect(() => {
-    const shouldRun = config.animated && styleAnimated && visible && docVisible && !reducedMotion;
+    const shouldRun =
+      config.animated &&
+      styleAnimated &&
+      visible &&
+      docVisible &&
+      !reducedMotion &&
+      !reduceMotionPreference;
     const draw = drawRef.current;
 
     if (!shouldRun || !draw) {
@@ -176,7 +184,15 @@ const GenerativeArtWidget: React.FC<WidgetComponentProps> = ({
 
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [config.animated, config.style, styleAnimated, visible, docVisible, reducedMotion]);
+  }, [
+    config.animated,
+    config.style,
+    styleAnimated,
+    visible,
+    docVisible,
+    reducedMotion,
+    reduceMotionPreference,
+  ]);
 
   const update = useCallback(
     (patch: Partial<CanvasSettings>) => {
@@ -234,7 +250,7 @@ const GenerativeArtWidget: React.FC<WidgetComponentProps> = ({
 
           {settingsOpen ? (
             <div className={cn("absolute right-0 top-full z-30 mt-1 w-44 p-1", menuSurfaceClass)}>
-              <p className="px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-slate-500">
+              <p className="px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                 Style
               </p>
               {ART_STYLES.map((entry) => (
@@ -242,14 +258,14 @@ const GenerativeArtWidget: React.FC<WidgetComponentProps> = ({
                   key={entry.id}
                   type="button"
                   onClick={() => update({ style: entry.id })}
-                  className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-zinc-100 transition-colors hover:bg-zinc-800"
+                  className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-foreground transition-colors hover:bg-accent"
                 >
                   <Check className={cn("h-3.5 w-3.5", config.style !== entry.id && "opacity-0")} />
                   {entry.label}
                 </button>
               ))}
 
-              <p className="px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-slate-500">
+              <p className="px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                 Palette
               </p>
               {ART_PALETTES.map((id) => (
@@ -257,7 +273,7 @@ const GenerativeArtWidget: React.FC<WidgetComponentProps> = ({
                   key={id}
                   type="button"
                   onClick={() => update({ palette: id })}
-                  className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-zinc-100 transition-colors hover:bg-zinc-800"
+                  className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-foreground transition-colors hover:bg-accent"
                 >
                   <Check className={cn("h-3.5 w-3.5", config.palette !== id && "opacity-0")} />
                   {PALETTES[id].label}
@@ -267,7 +283,7 @@ const GenerativeArtWidget: React.FC<WidgetComponentProps> = ({
               <button
                 type="button"
                 onClick={() => update({ animated: !config.animated })}
-                className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-zinc-100 transition-colors hover:bg-zinc-800"
+                className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-foreground transition-colors hover:bg-accent"
               >
                 <Check className={cn("h-3.5 w-3.5", !config.animated && "opacity-0")} />
                 Animate

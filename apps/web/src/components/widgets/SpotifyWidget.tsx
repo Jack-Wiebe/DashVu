@@ -234,7 +234,7 @@ const SpotifyWidget: React.FC<WidgetComponentProps> = ({ className }) => {
               height={28}
             />
           ) : (
-            <div className="h-7 w-7 rounded-full bg-zinc-800" />
+            <div className="h-7 w-7 rounded-full bg-muted" />
           )}
         </div>
 
@@ -248,13 +248,13 @@ const SpotifyWidget: React.FC<WidgetComponentProps> = ({ className }) => {
               height={160}
             />
           ) : (
-            <div className="h-40 w-40 rounded bg-zinc-800" />
+            <div className="h-40 w-40 rounded bg-muted" />
           )}
         </div>
 
         {playbackStarting ? (
           <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-            <Loader2 className="h-6 w-6 animate-spin text-zinc-300" />
+            <Loader2 className="h-6 w-6 animate-spin text-foreground/80" />
           </div>
         ) : null}
 
@@ -262,7 +262,7 @@ const SpotifyWidget: React.FC<WidgetComponentProps> = ({ className }) => {
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              className="absolute right-0 top-0 flex max-w-[45%] items-center gap-1.5 overflow-clip rounded px-1 py-0.5 text-[11px] text-zinc-400 transition-colors hover:text-zinc-200 focus:outline-none"
+              className="absolute right-0 top-0 flex max-w-[45%] items-center gap-1.5 overflow-clip rounded px-1 py-0.5 text-[11px] text-muted-foreground transition-colors hover:text-foreground focus:outline-none"
             >
               <ListMusic className="h-3.5 w-3.5 shrink-0" />
               <span className="truncate">{trackContextName ?? "Playlists"}</span>
@@ -293,7 +293,7 @@ const SpotifyWidget: React.FC<WidgetComponentProps> = ({ className }) => {
                       className="h-5 w-5 shrink-0 rounded-sm"
                     />
                   ) : (
-                    <div className="h-5 w-5 shrink-0 rounded-sm bg-zinc-800" />
+                    <div className="h-5 w-5 shrink-0 rounded-sm bg-muted" />
                   )}
                   <span className="truncate">{playlist.name}</span>
                   {playlist.uri === currentContextUri ? (
@@ -308,7 +308,9 @@ const SpotifyWidget: React.FC<WidgetComponentProps> = ({ className }) => {
 
       <div id="Track Info" className="flex shrink-0 flex-col items-center gap-1 text-center">
         <p className="max-w-full truncate">{track?.name ?? "Nothing playing"}</p>
-        {artists ? <p className="max-w-full truncate text-xs text-zinc-400">{artists}</p> : null}
+        {artists ? (
+          <p className="max-w-full truncate text-xs text-muted-foreground">{artists}</p>
+        ) : null}
 
         <Progress.Root
           value={progress}
@@ -328,7 +330,7 @@ const SpotifyWidget: React.FC<WidgetComponentProps> = ({ className }) => {
           disabled={shuffle.isPending}
           aria-label="Toggle shuffle"
         >
-          <Shuffle className={shuffleState ? "text-white" : "text-zinc-500"} />
+          <Shuffle className={shuffleState ? "text-white" : "text-muted-foreground"} />
         </Button>
         <Button
           className="max-w-12"
@@ -356,7 +358,9 @@ const SpotifyWidget: React.FC<WidgetComponentProps> = ({ className }) => {
           {repeatState === "track" ? (
             <Repeat1 className="text-white" />
           ) : (
-            <Repeat2 className={repeatState === "context" ? "text-white" : "text-zinc-500"} />
+            <Repeat2
+              className={repeatState === "context" ? "text-white" : "text-muted-foreground"}
+            />
           )}
         </Button>
       </div>

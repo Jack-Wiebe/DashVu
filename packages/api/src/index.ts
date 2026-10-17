@@ -3,6 +3,7 @@ import { dashboardRouter } from "./routers/dashboard";
 import { dictionaryRouter } from "./routers/dictionary";
 import { discoverRouter } from "./routers/discover";
 import { funPackRouter } from "./routers/funPack";
+import { mapsRouter } from "./routers/maps";
 import { newsRouter } from "./routers/news";
 import { plannerRouter } from "./routers/planner";
 import { spotifyRouter } from "./routers/spotify";
@@ -19,6 +20,7 @@ export const appRouter = router({
   news: newsRouter,
   discover: discoverRouter,
   dictionary: dictionaryRouter,
+  map: mapsRouter,
   dashboard: dashboardRouter,
   user: userRouter,
 });

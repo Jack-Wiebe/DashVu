@@ -12,6 +12,7 @@ export * from "./planner";
 export * from "./news";
 export * from "./discover";
 export * from "./dictionary";
+export * from "./maps";
 export * from "./dashboard";
 
 export const widgetKindSchema = z.enum([
@@ -25,11 +26,12 @@ export const widgetKindSchema = z.enum([
   "news",
   "discover",
   "dictionary",
+  "map",
 ]);
 
 export type WidgetKind = z.infer<typeof widgetKindSchema>;
 
-export const widgetSizeSchema = z.enum(["sm", "md", "lrg"]);
+export const widgetSizeSchema = z.enum(["sm", "md", "lrg", "xl"]);
 
 export type WidgetSize = z.infer<typeof widgetSizeSchema>;
 

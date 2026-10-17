@@ -25,6 +25,10 @@ export const connectorIdSchema = z.enum([
   "dictionaryApi",
   "datamuse",
   "wiktionary",
+  "photon",
+  "osrm",
+  "valhalla",
+  "transitous",
 ]);
 
 export type ConnectorId = z.infer<typeof connectorIdSchema>;

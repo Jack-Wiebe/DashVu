@@ -7,6 +7,7 @@ import DiscoverWidget from "@/components/widgets/DiscoverWidget";
 import FunPackWidget from "@/components/widgets/FunPackWidget";
 import GenerativeArtWidget from "@/components/widgets/GenerativeArtWidget";
 import GalleryWidget from "@/components/widgets/GalleryWidget";
+import MapWidget from "@/components/widgets/MapWidget";
 import NewsWidget from "@/components/widgets/NewsWidget";
 import PlannerWidget from "@/components/widgets/PlannerWidget";
 import SpotifyWidget from "@/components/widgets/SpotifyWidget";
@@ -20,7 +21,7 @@ export const WIDGET_REGISTRY: Record<WidgetKind, WidgetDefinition> = {
     Icon: Icons.spotify,
     defaultTitle: "Now Playing",
     defaultSize: "sm",
-    sizes: ["sm", "md", "lrg"],
+    sizes: ["sm", "md", "lrg", "xl"],
   },
   gallery: {
     kind: "gallery",
@@ -28,7 +29,7 @@ export const WIDGET_REGISTRY: Record<WidgetKind, WidgetDefinition> = {
     Icon: Icons.gallery,
     defaultTitle: "Gallery",
     defaultSize: "sm",
-    sizes: ["sm", "md", "lrg"],
+    sizes: ["sm", "md", "lrg", "xl"],
   },
   calendar: {
     kind: "calendar",
@@ -36,7 +37,7 @@ export const WIDGET_REGISTRY: Record<WidgetKind, WidgetDefinition> = {
     Icon: Icons.calendar,
     defaultTitle: "Calendar",
     defaultSize: "md",
-    sizes: ["sm", "md", "lrg"],
+    sizes: ["sm", "md", "lrg", "xl"],
   },
   weather: {
     kind: "weather",
@@ -44,7 +45,7 @@ export const WIDGET_REGISTRY: Record<WidgetKind, WidgetDefinition> = {
     Icon: Icons.weather,
     defaultTitle: "Weather",
     defaultSize: "md",
-    sizes: ["sm", "md", "lrg"],
+    sizes: ["sm", "md", "lrg", "xl"],
   },
   funPack: {
     kind: "funPack",
@@ -52,7 +53,7 @@ export const WIDGET_REGISTRY: Record<WidgetKind, WidgetDefinition> = {
     Icon: Icons.funPack,
     defaultTitle: "Daily Fun Pack",
     defaultSize: "md",
-    sizes: ["sm", "md", "lrg"],
+    sizes: ["sm", "md", "lrg", "xl"],
   },
   planner: {
     kind: "planner",
@@ -60,7 +61,7 @@ export const WIDGET_REGISTRY: Record<WidgetKind, WidgetDefinition> = {
     Icon: Icons.planner,
     defaultTitle: "Planner",
     defaultSize: "md",
-    sizes: ["sm", "md", "lrg"],
+    sizes: ["sm", "md", "lrg", "xl"],
   },
   canvas: {
     kind: "canvas",
@@ -68,7 +69,7 @@ export const WIDGET_REGISTRY: Record<WidgetKind, WidgetDefinition> = {
     Icon: Icons.canvas,
     defaultTitle: "Generative Art",
     defaultSize: "md",
-    sizes: ["sm", "md", "lrg"],
+    sizes: ["sm", "md", "lrg", "xl"],
   },
   news: {
     kind: "news",
@@ -76,7 +77,7 @@ export const WIDGET_REGISTRY: Record<WidgetKind, WidgetDefinition> = {
     Icon: Icons.news,
     defaultTitle: "News Briefing",
     defaultSize: "md",
-    sizes: ["sm", "md", "lrg"],
+    sizes: ["sm", "md", "lrg", "xl"],
   },
   discover: {
     kind: "discover",
@@ -84,7 +85,7 @@ export const WIDGET_REGISTRY: Record<WidgetKind, WidgetDefinition> = {
     Icon: Icons.discover,
     defaultTitle: "Discover",
     defaultSize: "md",
-    sizes: ["sm", "md", "lrg"],
+    sizes: ["sm", "md", "lrg", "xl"],
   },
   dictionary: {
     kind: "dictionary",
@@ -92,7 +93,15 @@ export const WIDGET_REGISTRY: Record<WidgetKind, WidgetDefinition> = {
     Icon: Icons.dictionary,
     defaultTitle: "Dictionary",
     defaultSize: "md",
-    sizes: ["sm", "md", "lrg"],
+    sizes: ["sm", "md", "lrg", "xl"],
+  },
+  map: {
+    kind: "map",
+    Type: MapWidget,
+    Icon: Icons.map,
+    defaultTitle: "Map",
+    defaultSize: "md",
+    sizes: ["sm", "md", "lrg", "xl"],
   },
 };
 
@@ -102,6 +111,7 @@ export const WIDGET_SIZE_CLASSES: Record<WidgetSize, string> = {
   sm: "h-96 lg:col-span-1",
   md: "h-96 md:col-span-2 lg:col-span-2",
   lrg: "h-[34rem] md:col-span-2 lg:col-span-2",
+  xl: "h-[50rem] md:col-span-2 lg:col-span-2",
 };
 
 export function createWidget(kind: WidgetKind): WidgetConfig {

@@ -21,3 +21,14 @@ export type {
   RelatedWord,
   RelatedRelation,
 } from "./dictionary";
+export { haversineMeters, decodePolyline, formatDuration, formatDistance } from "./maps";
+export type {
+  TravelMode,
+  GeoPoint,
+  GeoPlace,
+  RouteLeg,
+  RouteResult,
+  TransitLeg,
+  TransitItinerary,
+  RoutingRequest,
+} from "./maps";

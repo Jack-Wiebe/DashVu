@@ -94,6 +94,14 @@ defaultSize, sizes }`); `Widget.tsx` resolves the component/icon from there. The
   `@dashvu/validators` (`widgetKindSchema`). Widget `size` is a **token** (`sm|md|lrg`,
   `widgetSizeSchema`), mapped to Tailwind classes in `WIDGET_SIZE_CLASSES` — never store raw Tailwind
   class strings in the DB (Tailwind would purge them).
+- Widget search UIs **must reuse the shared search pattern** rather than hand-rolling one: a `relative`
+  wrapper with an `absolute top-full z-30` results list styled by `menuSurfaceClass`, dismissed via
+  `useOnClickOutside` (`@/hooks/use-on-click-outside`) and the **Esc** key. The canonical implementation is
+  the Weather location search (`WeatherWidget.tsx`); the `map` widget follows the same pattern. If a second
+  widget needs it, extract a reusable `SearchCombobox` instead of copying. Render it in the widget's
+  **non-scrolling** area — the widget `<section>` doesn't clip overflow, but an `overflow-y-auto` ancestor
+  will, so never nest the search inside the scroll region. Dictionary-style lookups that replace the body
+  (not a dropdown) are the exception.
 - Users have **multiple dashboards (tabs)**. The server layout bootstraps them via
   `createCaller(...).dashboard.bootstrap()` (`apps/web/src/app/layout.tsx`), which returns
   `{ dashboards, activeId, active }`; the client store is `apps/web/src/components/DashboardsProvider.tsx`
@@ -139,6 +147,18 @@ defaultSize, sizes }`); `Widget.tsx` resolves the component/icon from there. The
   `wiktionary` connector (Wikimedia REST, definitions only), so lookups still resolve. Its Word of the
   Day is picked deterministically from `WORD_OF_THE_DAY` in `@dashvu/core`. Outbound requests via
   `fetchWithRetry` take an optional `timeoutMs` (AbortController) so a dead origin fails fast.
+- The `map` widget (kind `map`) is a route planner: it composes the `photon` connector (geocode/reverse,
+  Komoot), `osrm` (driving/cycling/walking routes + TSP via `trip`) and `transitous` (MOTIS public-transit
+  itineraries) through the `map` router (`packages/api/src/routers/maps.ts`). A `valhalla` connector
+  implements the same normalized `RouteResult` and can replace OSRM by switching `ROUTING_ENGINE` there.
+  Per-instance state (`mode`/`points`/`favourites`, see `mapSettingsSchema`) is persisted in
+  `widgetGroup.settings` via `onSettingsChange`; `points[0]` is the origin and the rest are stops (legacy
+  `origin`/`stops` settings are migrated on load; the UI labels the list "Stops"). The Leaflet canvas
+  (`MapCanvas.tsx`) is dynamic-`ssr:false` like `WeatherRadar.tsx` and uses `Marker` + `divIcon` (so markers
+  are draggable) and `Polyline` (no marker-icon assets); it is `isolate`d so Leaflet's internal z-indexes
+  can't paint over modals/dropdowns. The widget's search box lives inside the active-point banner (rendered
+  only while adding/editing a point) and follows the shared search pattern above; the map is resizable
+  (drag handle, session-persisted) and the stops list fills the remaining height.
 - When overriding `authorization` on a provider whose default is a **string** (e.g. Spotify:
   `authorization: "https://accounts.spotify.com/authorize?scope=..."`), you must re-specify `url`, or
   Auth.js's deep-merge replaces the string with `{}` and drops the endpoint (causes `TypeError: Invalid URL`
@@ -165,7 +185,12 @@ add Vitest/Playwright with tests colocated next to source. When adding a test sc
 ## Commits
 
 - **Never commit or push** (see Git workflow above) — the maintainer does all git operations manually.
+- **Commit messages cover the entire working tree.** Never ask for or assume partial commits; all
+  pending changes (modified + untracked) are one commit. Segmenting work is done with branches, not by
+  splitting commits.
 - Conventional Commits are enforced (commitlint + husky `commit-msg`); keep body lines ≤ 100 chars.
+  Multi-line bodies must be passed via a message file (`git commit -F <file>`), since `git commit -m`
+  does not wrap.
 - `pre-commit` runs lint-staged (Prettier on staged files).
 
 ## Known issues / TODO

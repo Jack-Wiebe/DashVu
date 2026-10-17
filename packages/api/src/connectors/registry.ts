@@ -14,10 +14,14 @@ import { icanhazdadjokeConnector } from "./icanhazdadjoke";
 import { nasaImagesConnector } from "./nasaImages";
 import { openMeteoConnector } from "./openMeteo";
 import { openMeteoGeocodingConnector } from "./openMeteoGeocoding";
+import { osrmConnector } from "./osrm";
+import { photonConnector } from "./photon";
 import { rainViewerConnector } from "./rainViewer";
 import { spaceflightNewsConnector } from "./spaceflightNews";
 import { spotifyConnector } from "./spotify";
+import { transitousConnector } from "./transitous";
 import { uselessFactsConnector } from "./uselessFacts";
+import { valhallaConnector } from "./valhalla";
 import { wikimediaOnThisDayConnector } from "./wikimediaOnThisDay";
 import { wiktionaryConnector } from "./wiktionary";
 import { zenQuotesConnector } from "./zenQuotes";
@@ -42,6 +46,10 @@ export const CONNECTORS = {
   dictionaryApi: dictionaryApiConnector,
   datamuse: datamuseConnector,
   wiktionary: wiktionaryConnector,
+  photon: photonConnector,
+  osrm: osrmConnector,
+  valhalla: valhallaConnector,
+  transitous: transitousConnector,
 } satisfies Record<ConnectorId, Connector>;
 
 export function getConnector<K extends ConnectorId>(id: K): (typeof CONNECTORS)[K] {

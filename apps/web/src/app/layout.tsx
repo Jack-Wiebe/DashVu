@@ -33,7 +33,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html lang="en" className={cn(themeClassName(theme), "antialiased", inter.className)}>
-      <body className="min-h-screen pt-14 bg-background text-foreground antialiased">
+      <body
+        suppressHydrationWarning
+        className="min-h-screen pt-14 bg-background text-foreground antialiased"
+      >
         <SessionProvider session={session}>
           <TRPCProvider>
             <PreferencesProvider

@@ -213,9 +213,15 @@ const SpotifyWidget: React.FC<WidgetComponentProps> = ({ className }) => {
     track && track.duration_ms > 0
       ? Math.min(100, (Math.min(progressMs, track.duration_ms) / track.duration_ms) * 100)
       : 0;
-  const albumImages = track && "album" in track ? track.album.images : [];
-  const artists =
-    track && "artists" in track ? track.artists.map((artist) => artist.name).join(", ") : "";
+  const images =
+    track && "images" in track ? track.images : track && "album" in track ? track.album.images : [];
+  const artworkUrl = images[1]?.url ?? images[0]?.url ?? null;
+  const subtitle =
+    track && "show" in track
+      ? track.show.name
+      : track && "artists" in track
+        ? track.artists.map((artist) => artist.name).join(", ")
+        : "";
   const trackContextName = playback.data?.context?.name ?? null;
   const currentContextUri = playback.data?.context_uri ?? playback.data?.context?.uri ?? null;
   const shuffleState = playback.data?.shuffle_state ?? false;
@@ -239,10 +245,10 @@ const SpotifyWidget: React.FC<WidgetComponentProps> = ({ className }) => {
         </div>
 
         <div className="mt-6 shrink-0">
-          {albumImages[1]?.url ? (
+          {artworkUrl ? (
             <Image
               className="h-auto w-40 rounded-md"
-              src={albumImages[1].url}
+              src={artworkUrl}
               alt={track?.name ?? "Album cover"}
               width={160}
               height={160}
@@ -308,8 +314,8 @@ const SpotifyWidget: React.FC<WidgetComponentProps> = ({ className }) => {
 
       <div id="Track Info" className="flex shrink-0 flex-col items-center gap-1 text-center">
         <p className="max-w-full truncate">{track?.name ?? "Nothing playing"}</p>
-        {artists ? (
-          <p className="max-w-full truncate text-xs text-muted-foreground">{artists}</p>
+        {subtitle ? (
+          <p className="max-w-full truncate text-xs text-muted-foreground">{subtitle}</p>
         ) : null}
 
         <Progress.Root

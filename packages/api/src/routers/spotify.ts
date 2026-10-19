@@ -24,7 +24,9 @@ async function resolveContextName(
           ? (await api.getAlbum(id)).body.name
           : type === "artist"
             ? (await api.getArtist(id)).body.name
-            : null;
+            : type === "show"
+              ? (await api.getShow(id)).body.name
+              : null;
     return name === null ? null : { type, name };
   } catch {
     return null;
@@ -67,15 +69,14 @@ async function getKnownDeviceId(api: SpotifyWebApi, userId: string): Promise<str
   }
 }
 
-async function attemptResume(api: SpotifyWebApi, userId: string): Promise<boolean> {
+async function resumeDevice(api: SpotifyWebApi, userId: string): Promise<string | null> {
   const deviceId = await getKnownDeviceId(api, userId);
-  if (!deviceId) return false;
+  if (!deviceId) return null;
   try {
     await api.transferMyPlayback([deviceId], { play: true });
-    const { body } = await api.getMyCurrentPlaybackState();
-    return Boolean(body?.device?.is_active);
+    return deviceId;
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -88,7 +89,10 @@ function spotifyErrorReason(e: unknown): string | null {
 export const spotifyRouter = router({
   getPlaybackState: protectedProcedure.query(async ({ ctx }) => {
     const api = await getApi(ctx.session.user.id);
-    const { body } = await api.getMyCurrentPlaybackState();
+    const playbackOptions: { market?: string; additional_types?: string } = {
+      additional_types: "track,episode",
+    };
+    const { body } = await api.getMyCurrentPlaybackState(playbackOptions);
 
     if (body) {
       await rememberActiveDevice(
@@ -131,23 +135,22 @@ export const spotifyRouter = router({
     .input(z.object({ uri: z.string().min(1) }))
     .mutation(async ({ ctx, input }): Promise<ControlResult> => {
       const api = await getApi(ctx.session.user.id);
-      const start = () => api.play({ context_uri: input.uri });
       try {
-        await start();
+        await api.play({ context_uri: input.uri });
         return { ok: true };
       } catch (error) {
-        if (
-          spotifyErrorReason(error) === "NO_ACTIVE_DEVICE" &&
-          (await attemptResume(api, ctx.session.user.id))
-        ) {
-          try {
-            await start();
-            return { ok: true };
-          } catch (resumeError) {
-            return {
-              ok: false,
-              reason: spotifyErrorReason(resumeError) ?? "Unable to start playlist.",
-            };
+        if (spotifyErrorReason(error) === "NO_ACTIVE_DEVICE") {
+          const deviceId = await resumeDevice(api, ctx.session.user.id);
+          if (deviceId) {
+            try {
+              await api.play({ context_uri: input.uri, device_id: deviceId });
+              return { ok: true };
+            } catch (resumeError) {
+              return {
+                ok: false,
+                reason: spotifyErrorReason(resumeError) ?? "Unable to start playlist.",
+              };
+            }
           }
         }
         return {
@@ -195,7 +198,7 @@ export const spotifyRouter = router({
     } catch (error) {
       if (
         spotifyErrorReason(error) === "NO_ACTIVE_DEVICE" &&
-        (await attemptResume(api, ctx.session.user.id))
+        (await resumeDevice(api, ctx.session.user.id))
       ) {
         return { ok: true };
       }

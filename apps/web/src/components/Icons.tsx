@@ -12,6 +12,7 @@ import {
   Telescope,
   BookA,
   Map,
+  Calculator,
 } from "lucide-react";
 
 export const Icons = {
@@ -48,4 +49,5 @@ export const Icons = {
   discover: (props: LucideProps) => <Telescope {...props} />,
   dictionary: (props: LucideProps) => <BookA {...props} />,
   map: (props: LucideProps) => <Map {...props} />,
+  calculator: (props: LucideProps) => <Calculator {...props} />,
 };

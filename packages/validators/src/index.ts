@@ -27,6 +27,7 @@ export const widgetKindSchema = z.enum([
   "discover",
   "dictionary",
   "map",
+  "calculator",
 ]);
 
 export type WidgetKind = z.infer<typeof widgetKindSchema>;

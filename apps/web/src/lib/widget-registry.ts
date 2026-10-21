@@ -2,6 +2,7 @@ import type { WidgetKind, WidgetSize } from "@dashvu/validators";
 
 import { Icons } from "@/components/Icons";
 import CalendarWidget from "@/components/widgets/CalendarWidget";
+import CalculatorWidget from "@/components/widgets/CalculatorWidget";
 import DictionaryWidget from "@/components/widgets/DictionaryWidget";
 import DiscoverWidget from "@/components/widgets/DiscoverWidget";
 import FunPackWidget from "@/components/widgets/FunPackWidget";
@@ -101,6 +102,14 @@ export const WIDGET_REGISTRY: Record<WidgetKind, WidgetDefinition> = {
     Icon: Icons.map,
     defaultTitle: "Map",
     defaultSize: "md",
+    sizes: ["sm", "md", "lrg", "xl"],
+  },
+  calculator: {
+    kind: "calculator",
+    Type: CalculatorWidget,
+    Icon: Icons.calculator,
+    defaultTitle: "Calculator",
+    defaultSize: "sm",
     sizes: ["sm", "md", "lrg", "xl"],
   },
 };

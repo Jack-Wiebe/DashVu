@@ -56,6 +56,7 @@ const Widget: React.FC<{
           <Type
             widgetId={config.id}
             className="h-full"
+            size={config.size}
             settings={config.settings}
             onSettingsChange={onSettingsChange}
           />

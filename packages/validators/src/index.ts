@@ -32,9 +32,15 @@ export const widgetKindSchema = z.enum([
 
 export type WidgetKind = z.infer<typeof widgetKindSchema>;
 
-export const widgetSizeSchema = z.enum(["sm", "md", "lrg", "xl"]);
+export const widgetSizeSchema = z
+  .string()
+  .regex(/^[1-3]w[1-6]h$/, "Expected a grid token such as 1w1h or 2w3h");
 
 export type WidgetSize = z.infer<typeof widgetSizeSchema>;
+
+export const MAX_WIDGET_WIDTH = 3;
+
+export const MAX_WIDGET_HEIGHT = 6;
 
 /**
  * A widget placement on a dashboard. Name/settings/content belong to the
@@ -95,9 +101,9 @@ export const DEFAULT_WIDGET_LAYOUT: Array<{
   size: WidgetSize;
   position: number;
 }> = [
-  { kind: "spotify", title: "Now Playing", size: "sm", position: 0 },
-  { kind: "gallery", title: "Gallery", size: "sm", position: 1 },
-  { kind: "calendar", title: "Calendar", size: "md", position: 2 },
+  { kind: "spotify", title: "Now Playing", size: "1w1h", position: 0 },
+  { kind: "gallery", title: "Gallery", size: "1w1h", position: 1 },
+  { kind: "calendar", title: "Calendar", size: "2w1h", position: 2 },
 ];
 
 export const calendarEventsInputSchema = z

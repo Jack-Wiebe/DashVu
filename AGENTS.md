@@ -90,10 +90,12 @@ Run a single app with a filter, e.g. `pnpm --filter @dashvu/web dev`.
 - New widgets follow the `WidgetConfig` contract in `apps/web/src/types/widget.ts` and render through
   `apps/web/src/components/Widget.tsx`. Every widget **must** be registered in
   `apps/web/src/lib/widget-registry.ts` (`WIDGET_REGISTRY`: kind → `{ Type, Icon, defaultTitle,
-defaultSize, sizes }`); `Widget.tsx` resolves the component/icon from there. The `kind` enum lives in
-  `@dashvu/validators` (`widgetKindSchema`). Widget `size` is a **token** (`sm|md|lrg`,
-  `widgetSizeSchema`), mapped to Tailwind classes in `WIDGET_SIZE_CLASSES` — never store raw Tailwind
-  class strings in the DB (Tailwind would purge them).
+defaultSize }`); `Widget.tsx` resolves the component/icon from there. The `kind` enum lives in
+  `@dashvu/validators` (`widgetKindSchema`). Widget `size` is a **grid token** (`WxH`, e.g. `1w1h`,
+  `2w1h`, `2w2h`, `1w3h`; `widgetSizeSchema` allows width 1-3, height 1-6), mapped to Tailwind
+  col/row-span classes by `widgetSizeClasses` — never store raw Tailwind class strings in the DB
+  (Tailwind would purge them). The dashboard grid uses `auto-rows-[24rem]`, so `Nh` is N rows tall.
+  Sizes are changed by dragging the bottom-right handle in edit mode or via the drawer steppers.
 - Widget search UIs **must reuse the shared search pattern** rather than hand-rolling one: a `relative`
   wrapper with an `absolute top-full z-30` results list styled by `menuSurfaceClass`, dismissed via
   `useOnClickOutside` (`@/hooks/use-on-click-outside`) and the **Esc** key. The canonical implementation is

@@ -32,3 +32,5 @@ export type {
   TransitItinerary,
   RoutingRequest,
 } from "./maps";
+export { parseWidgetSize, widgetSize, isWidgetSize, normalizeWidgetSize } from "./widget-size";
+export type { WidgetSpan } from "./widget-size";

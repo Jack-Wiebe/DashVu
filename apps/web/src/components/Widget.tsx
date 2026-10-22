@@ -1,17 +1,19 @@
 import React from "react";
 
 import { cn } from "@/lib/utils";
-import { WIDGET_REGISTRY, WIDGET_SIZE_CLASSES } from "@/lib/widget-registry";
+import { WIDGET_REGISTRY, widgetSizeClasses } from "@/lib/widget-registry";
 import type { WidgetConfig } from "@/types/widget";
 
 const Widget: React.FC<{
   config: WidgetConfig;
   actions?: React.ReactNode;
+  resizeHandle?: React.ReactNode;
   style?: React.CSSProperties;
   innerRef?: React.Ref<HTMLElement>;
   onSettingsChange?: (settings: Record<string, unknown>) => void;
   pending?: boolean;
-}> = ({ config, actions, style, innerRef, onSettingsChange, pending }) => {
+  index?: number;
+}> = ({ config, actions, resizeHandle, style, innerRef, onSettingsChange, pending, index }) => {
   const definition = WIDGET_REGISTRY[config.kind];
 
   if (!definition) {
@@ -20,8 +22,8 @@ const Widget: React.FC<{
         ref={innerRef}
         style={style}
         className={cn(
-          "flex flex-col items-center justify-center rounded-md border border-dashed border-border p-4 text-sm text-foreground/80",
-          WIDGET_SIZE_CLASSES[config.size]
+          "relative flex flex-col items-center justify-center rounded-md border border-dashed border-border p-4 text-sm text-foreground/80",
+          widgetSizeClasses(config.size)
         )}
       >
         Unknown widget: {config.kind}
@@ -36,8 +38,8 @@ const Widget: React.FC<{
       ref={innerRef}
       style={style}
       className={cn(
-        "flex flex-col rounded-md border border-border p-4",
-        WIDGET_SIZE_CLASSES[config.size]
+        "relative flex flex-col rounded-md border border-border p-4",
+        widgetSizeClasses(config.size)
       )}
     >
       <header className="mb-3 flex items-center gap-2">
@@ -59,9 +61,11 @@ const Widget: React.FC<{
             size={config.size}
             settings={config.settings}
             onSettingsChange={onSettingsChange}
+            index={index}
           />
         )}
       </div>
+      {resizeHandle}
     </section>
   );
 };

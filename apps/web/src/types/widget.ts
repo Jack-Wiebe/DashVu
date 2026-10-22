@@ -9,6 +9,7 @@ export interface WidgetComponentProps {
   size?: WidgetSize;
   settings?: Record<string, unknown> | null;
   onSettingsChange?: (settings: Record<string, unknown>) => void;
+  index?: number;
 }
 
 export interface WidgetConfig {
@@ -26,7 +27,6 @@ export interface WidgetDefinition {
   Icon?: ComponentType<LucideProps>;
   defaultTitle: string;
   defaultSize: WidgetSize;
-  sizes: WidgetSize[];
 }
 
 export default WidgetConfig;

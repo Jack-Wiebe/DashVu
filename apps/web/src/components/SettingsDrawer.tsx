@@ -2,13 +2,19 @@
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { signOut, useSession } from "next-auth/react";
-import { Check, LogOut, Plus } from "lucide-react";
+import { Check, LogOut, Minus, Plus } from "lucide-react";
+import { parseWidgetSize, widgetSize } from "@dashvu/core";
+import {
+  MAX_WIDGET_HEIGHT,
+  MAX_WIDGET_WIDTH,
+  type WidgetKind,
+  type WidgetSize,
+} from "@dashvu/validators";
 
 import { cn } from "@/lib/utils";
 import { THEMES } from "@/lib/themes";
 import { trpc } from "@/lib/trpc/client";
 import { WIDGET_REGISTRY } from "@/lib/widget-registry";
-import type { WidgetKind, WidgetSize } from "@dashvu/validators";
 
 import { useDashboards } from "./DashboardsProvider";
 import { usePreferences } from "./PreferencesProvider";
@@ -66,8 +72,94 @@ function nextInstanceName(base: string, existing: string[]): string {
   return `${root} ${n}`;
 }
 
+const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+
+const SizeStepper = ({
+  label,
+  value,
+  min,
+  max,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  disabled?: boolean;
+  onChange: (value: number) => void;
+}) => (
+  <div className="flex items-center justify-between gap-2 rounded-md border border-border px-2 py-1.5">
+    <span className="text-xs text-muted-foreground">{label}</span>
+    <span className="flex items-center gap-1">
+      <Button
+        type="button"
+        size="xs"
+        variant="outline"
+        aria-label={`Decrease ${label.toLowerCase()}`}
+        disabled={disabled || value <= min}
+        onClick={() => onChange(value - 1)}
+      >
+        <Minus className="h-3 w-3" />
+      </Button>
+      <span className="min-w-[1.5rem] text-center text-sm tabular-nums">{value}</span>
+      <Button
+        type="button"
+        size="xs"
+        variant="outline"
+        aria-label={`Increase ${label.toLowerCase()}`}
+        disabled={disabled || value >= max}
+        onClick={() => onChange(value + 1)}
+      >
+        <Plus className="h-3 w-3" />
+      </Button>
+    </span>
+  </div>
+);
+
+const SizeField = ({
+  size,
+  saving,
+  onResize,
+}: {
+  size: WidgetSize;
+  saving: boolean;
+  onResize: (size: WidgetSize) => void;
+}) => {
+  const span = parseWidgetSize(size);
+  const apply = (width: number, height: number) =>
+    onResize(widgetSize(clamp(width, 1, MAX_WIDGET_WIDTH), clamp(height, 1, MAX_WIDGET_HEIGHT)));
+
+  return (
+    <Field
+      label="Size"
+      hint={`Width 1-${MAX_WIDGET_WIDTH} columns, height 1-${MAX_WIDGET_HEIGHT} rows.`}
+    >
+      <div className="flex flex-col gap-2">
+        <SizeStepper
+          label="Width"
+          value={span.width}
+          min={1}
+          max={MAX_WIDGET_WIDTH}
+          disabled={saving}
+          onChange={(width) => apply(width, span.height)}
+        />
+        <SizeStepper
+          label="Height"
+          value={span.height}
+          min={1}
+          max={MAX_WIDGET_HEIGHT}
+          disabled={saving}
+          onChange={(height) => apply(span.width, height)}
+        />
+        <span className="text-center text-xs text-muted-foreground">{size}</span>
+      </div>
+    </Field>
+  );
+};
+
 const WidgetSettingsPanel = ({ widgetId }: { widgetId: string }) => {
-  const { widgets, resizeWidget, renameInstance, setWidgetInstance, createInstance } =
+  const { widgets, resizeWidget, renameInstance, setWidgetInstance, createInstance, saving } =
     useDashboards();
   const widget = widgets.find((entry) => entry.id === widgetId);
 
@@ -85,7 +177,6 @@ const WidgetSettingsPanel = ({ widgetId }: { widgetId: string }) => {
     return <SheetDescription>This widget is no longer available.</SheetDescription>;
   }
 
-  const sizes = WIDGET_REGISTRY[widget.kind].sizes;
   const groupId = widget.groupId;
 
   const commitName = () => {
@@ -126,21 +217,11 @@ const WidgetSettingsPanel = ({ widgetId }: { widgetId: string }) => {
           />
         </Field>
 
-        <Field label="Size">
-          <div className="flex flex-wrap gap-2">
-            {sizes.map((size: WidgetSize) => (
-              <Button
-                key={size}
-                type="button"
-                size="sm"
-                variant={size === widget.size ? "default" : "outline"}
-                onClick={() => resizeWidget(widget.id, size)}
-              >
-                {size}
-              </Button>
-            ))}
-          </div>
-        </Field>
+        <SizeField
+          size={widget.size}
+          saving={saving}
+          onResize={(token) => resizeWidget(widget.id, token)}
+        />
       </Section>
 
       <Section title="Instance">

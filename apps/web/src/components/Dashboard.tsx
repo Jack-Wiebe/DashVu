@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   closestCenter,
   DndContext,
@@ -31,11 +32,16 @@ const Dashboard = () => {
     updateSettings,
     handleDragEnd,
   } = useDashboards();
+  const [mounted, setMounted] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   if (!ready || !activeId) return null;
 
@@ -59,16 +65,16 @@ const Dashboard = () => {
               : 'Click "Edit layout" in the top bar to add widgets.'}
           </p>
         </div>
-      ) : (
+      ) : mounted ? (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext
             items={widgets.map((widget) => widget.id)}
             strategy={rectSortingStrategy}
           >
-            <div className="grid grid-cols-1 gap-8 text-foreground md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid auto-rows-[24rem] grid-cols-1 gap-8 text-foreground md:grid-cols-2 lg:grid-cols-3">
               {widgets.map((widget, index) => (
                 <SortableWidget
-                  key={widget.id}
+                  key={`${widget.id}-${index}`}
                   widget={widget}
                   editMode={editMode}
                   saving={saving}
@@ -83,6 +89,23 @@ const Dashboard = () => {
             </div>
           </SortableContext>
         </DndContext>
+      ) : (
+        <div className="grid auto-rows-[24rem] grid-cols-1 gap-8 text-foreground md:grid-cols-2 lg:grid-cols-3">
+          {widgets.map((widget, index) => (
+            <SortableWidget
+              key={`${widget.id}-${index}`}
+              widget={widget}
+              editMode={editMode}
+              saving={saving}
+              index={index}
+              total={widgets.length}
+              onMove={moveWidget}
+              onRemove={removeWidget}
+              onResize={resizeWidget}
+              onSettingsChange={updateSettings}
+            />
+          ))}
+        </div>
       )}
     </div>
   );

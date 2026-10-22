@@ -1,4 +1,5 @@
 import { TRPCError } from "@trpc/server";
+import { normalizeWidgetSize } from "@dashvu/core";
 import { and, asc, desc, eq, notInArray, sql } from "drizzle-orm";
 
 import { dashboards, db, userPreferences, widgetGroups, widgets } from "@dashvu/db";
@@ -13,7 +14,6 @@ import {
   widgetInstanceListSchema,
   widgetInstanceUpdateSchema,
   type WidgetKind,
-  type WidgetSize,
 } from "@dashvu/validators";
 
 import { resolveGroupForKind } from "../groups";
@@ -32,7 +32,7 @@ function toWidget(row: {
     id: row.id,
     kind: row.kind as WidgetKind,
     title: row.groupName,
-    size: (row.size === "wide" ? "lrg" : row.size) as WidgetSize,
+    size: normalizeWidgetSize(row.size),
     position: row.position,
     settings: row.groupSettings ?? null,
     groupId: row.groupId,

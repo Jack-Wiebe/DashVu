@@ -155,11 +155,16 @@ const DashboardTabs = ({ listRef }: { listRef: RefObject<HTMLDivElement | null> 
     createDashboard,
   } = useDashboards();
   const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -180,33 +185,60 @@ const DashboardTabs = ({ listRef }: { listRef: RefObject<HTMLDivElement | null> 
   return (
     <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
       <div ref={listRef} className="flex items-center gap-1">
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext
-            items={dashboards.map((dashboard) => dashboard.id)}
-            strategy={horizontalListSortingStrategy}
+        {editMode && mounted ? (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
           >
-            <div className="flex items-center gap-1">
-              {dashboards.map((dashboard) => (
-                <DashboardTab
-                  key={dashboard.id}
-                  dashboard={dashboard}
-                  active={dashboard.id === activeId}
-                  editMode={editMode}
-                  renaming={renamingId === dashboard.id}
-                  canDelete={dashboards.length > 1}
-                  onSelect={() => switchTo(dashboard.id)}
-                  onRenameStart={() => setRenamingId(dashboard.id)}
-                  onRenameDone={(name) => {
-                    setRenamingId(null);
-                    if (name && name !== dashboard.name) void renameDashboard(dashboard.id, name);
-                  }}
-                  onRenameCancel={() => setRenamingId(null)}
-                  onDelete={() => void removeDashboard(dashboard.id)}
-                />
-              ))}
-            </div>
-          </SortableContext>
-        </DndContext>
+            <SortableContext
+              items={dashboards.map((dashboard) => dashboard.id)}
+              strategy={horizontalListSortingStrategy}
+            >
+              <div className="flex items-center gap-1">
+                {dashboards.map((dashboard) => (
+                  <DashboardTab
+                    key={dashboard.id}
+                    dashboard={dashboard}
+                    active={dashboard.id === activeId}
+                    editMode={editMode}
+                    renaming={renamingId === dashboard.id}
+                    canDelete={dashboards.length > 1}
+                    onSelect={() => switchTo(dashboard.id)}
+                    onRenameStart={() => setRenamingId(dashboard.id)}
+                    onRenameDone={(name) => {
+                      setRenamingId(null);
+                      if (name && name !== dashboard.name) void renameDashboard(dashboard.id, name);
+                    }}
+                    onRenameCancel={() => setRenamingId(null)}
+                    onDelete={() => void removeDashboard(dashboard.id)}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+        ) : (
+          <div className="flex items-center gap-1">
+            {dashboards.map((dashboard) => (
+              <DashboardTab
+                key={dashboard.id}
+                dashboard={dashboard}
+                active={dashboard.id === activeId}
+                editMode={editMode}
+                renaming={renamingId === dashboard.id}
+                canDelete={dashboards.length > 1}
+                onSelect={() => switchTo(dashboard.id)}
+                onRenameStart={() => setRenamingId(dashboard.id)}
+                onRenameDone={(name) => {
+                  setRenamingId(null);
+                  if (name && name !== dashboard.name) void renameDashboard(dashboard.id, name);
+                }}
+                onRenameCancel={() => setRenamingId(null)}
+                onDelete={() => void removeDashboard(dashboard.id)}
+              />
+            ))}
+          </div>
+        )}
 
         {editMode ? (
           <button

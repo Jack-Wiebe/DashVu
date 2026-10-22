@@ -218,11 +218,13 @@ const MapWidget: React.FC<WidgetComponentProps> = ({
   className,
   settings,
   onSettingsChange,
+  index = 0,
 }) => {
   const utils = trpc.useUtils();
 
   const [state, setState] = useState<MapState>(() => readSettings(settings));
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [mapKey, setMapKey] = useState<string>(() => `${widgetId}`);
   const [query, setQuery] = useState("");
   const [searchParams, setSearchParams] = useState<{
     query: string;
@@ -234,6 +236,11 @@ const MapWidget: React.FC<WidgetComponentProps> = ({
   const [optimizing, setOptimizing] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [mapPct, setMapPct] = useState(50);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const searchRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -666,6 +673,7 @@ const MapWidget: React.FC<WidgetComponentProps> = ({
           onViewportChange={onViewportChange}
           pickActive={activeId !== null}
           className="min-h-0 flex-1"
+          mapKey={mapKey}
         />
       </div>
 
@@ -770,7 +778,7 @@ const MapWidget: React.FC<WidgetComponentProps> = ({
               <p className="py-2 text-center text-xs text-muted-foreground">
                 Search, add a stop, or use your location.
               </p>
-            ) : (
+            ) : mounted ? (
               <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}
@@ -799,6 +807,22 @@ const MapWidget: React.FC<WidgetComponentProps> = ({
                   </ul>
                 </SortableContext>
               </DndContext>
+            ) : (
+              <ul className="flex flex-col gap-1">
+                {state.points.map((point, index) => (
+                  <SortablePoint
+                    key={point.id}
+                    point={point}
+                    index={index}
+                    active={activeId === point.id}
+                    onEdit={() => setActiveId((value) => (value === point.id ? null : point.id))}
+                    onRemove={() => {
+                      setActiveId((value) => (value === point.id ? null : value));
+                      commit({ points: state.points.filter((item) => item.id !== point.id) });
+                    }}
+                  />
+                ))}
+              </ul>
             )}
 
             {state.favourites.length > 0 ? (

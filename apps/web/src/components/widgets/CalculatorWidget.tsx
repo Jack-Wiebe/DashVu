@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { parseWidgetSize } from "@dashvu/core";
+
 import type { WidgetComponentProps } from "@/types/widget";
 import { cn } from "@/lib/utils";
 
@@ -31,7 +33,7 @@ const CalculatorWidget: React.FC<WidgetComponentProps> = ({ className, size }) =
   const [waitingForOperand, setWaitingForOperand] = useState(false);
   const [angleMode, setAngleMode] = useState<"rad" | "deg">("deg");
 
-  const showSci = size !== "sm";
+  const showSci = parseWidgetSize(size).width >= 2;
   const keyCol = (offset: number) => (showSci ? 4 + offset : 1 + offset);
 
   const inputDigit = (d: string) => {

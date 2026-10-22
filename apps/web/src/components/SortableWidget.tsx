@@ -1,13 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import type { WidgetSize } from "@dashvu/validators";
-import { ChevronDown, ChevronUp, GripVertical, Maximize2, Settings, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, GripVertical, Settings, Trash2 } from "lucide-react";
 
-import { WIDGET_REGISTRY } from "@/lib/widget-registry";
 import type { WidgetConfig } from "@/types/widget";
 import { useSettings } from "./SettingsDrawer";
 import Widget from "./Widget";
+import WidgetResizeHandle from "./WidgetResizeHandle";
 
 interface SortableWidgetProps {
   widget: WidgetConfig;
@@ -33,20 +34,28 @@ const SortableWidget = ({
   onSettingsChange,
 }: SortableWidgetProps) => {
   const { openWidgetSettings } = useSettings();
+  const [previewSize, setPreviewSize] = useState<WidgetSize | null>(null);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: widget.id,
   });
 
-  const sizes = WIDGET_REGISTRY[widget.kind].sizes;
-  const nextSize = sizes[(sizes.indexOf(widget.size) + 1) % sizes.length];
-  const canResize = sizes.length > 1;
-
   return (
     <Widget
-      config={widget}
+      config={previewSize ? { ...widget, size: previewSize } : widget}
       innerRef={setNodeRef}
       pending={!widget.groupId}
+      index={index}
       onSettingsChange={(settings) => onSettingsChange(widget.id, settings)}
+      resizeHandle={
+        editMode ? (
+          <WidgetResizeHandle
+            size={widget.size}
+            disabled={saving}
+            onPreview={setPreviewSize}
+            onResize={(size) => onResize(widget.id, size)}
+          />
+        ) : null
+      }
       style={{
         transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
         transition,
@@ -83,16 +92,6 @@ const SortableWidget = ({
               className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-30"
             >
               <ChevronDown className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              aria-label={`Change size (currently ${widget.size}, next ${nextSize})`}
-              title={`Size: ${widget.size} — click to change`}
-              disabled={saving || !canResize}
-              onClick={() => onResize(widget.id, nextSize)}
-              className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-30"
-            >
-              <Maximize2 className="h-4 w-4" />
             </button>
             <button
               type="button"

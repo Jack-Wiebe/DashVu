@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { inferRouterOutputs } from "@trpc/server";
 import {
   closestCenter,
@@ -275,9 +275,14 @@ const PlannerWidget = ({
   });
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const changeMode = (next: PlannerMode) => {
     setEditingId(null);
@@ -372,9 +377,9 @@ const PlannerWidget = ({
 
       {items.length === 0 ? (
         <p className="m-auto px-2 text-center text-sm text-muted-foreground">
-          {query.isLoading ? "Loading…" : "Nothing here yet. Add your first item above."}
+          {query.isLoading ? "Loading..." : "Nothing here yet. Add your first item above."}
         </p>
-      ) : (
+      ) : mounted ? (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext
             items={items.map((item) => item.id)}
@@ -402,6 +407,27 @@ const PlannerWidget = ({
             </ul>
           </SortableContext>
         </DndContext>
+      ) : (
+        <ul className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto pr-1">
+          {items.map((item) => (
+            <SortableItem
+              key={item.id}
+              item={item}
+              mode={mode}
+              editing={editingId === item.id}
+              editDraft={editDraft}
+              onEditDraftChange={setEditDraft}
+              onStartEdit={() => {
+                setEditingId(item.id);
+                setEditDraft(item.text);
+              }}
+              onCommitEdit={commitEdit}
+              onCancelEdit={() => setEditingId(null)}
+              onToggle={() => update.mutate({ id: item.id, checked: !item.checked })}
+              onRemove={() => remove.mutate({ id: item.id })}
+            />
+          ))}
+        </ul>
       )}
 
       {mode === "todos" && checkedCount > 0 ? (

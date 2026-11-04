@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { keepPreviousData } from "@tanstack/react-query";
 import { signIn, useSession } from "next-auth/react";
 import type { View } from "react-big-calendar";
+import { calendarSettingsSchema } from "@dashvu/validators";
 
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
@@ -30,6 +31,17 @@ function startOfDay(date: Date) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
+function localDateKey(date: Date) {
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+const TASKS_ERROR_MESSAGES = {
+  disabled: "Tasks API is not enabled for this Google project.",
+  scope: "Reconnect Google to grant Tasks access.",
+  unknown: "Could not load tasks.",
+} as const;
+
 function getRange(view: View, date: Date) {
   const base = startOfDay(date);
 
@@ -53,17 +65,32 @@ function getRange(view: View, date: Date) {
   return { timeMin, timeMax };
 }
 
-const CalendarWidget: React.FC<WidgetComponentProps> = ({ className }) => {
+const CalendarWidget: React.FC<WidgetComponentProps> = ({ className, settings }) => {
   const { data: session, status } = useSession();
   const hasCalendar = Boolean(session?.user.hasCalendar);
 
   const [view, setView] = useState<View>("month");
   const [date, setDate] = useState<Date>(() => new Date());
 
+  const hiddenCalendarIds = useMemo(() => {
+    const parsed = calendarSettingsSchema.safeParse(settings ?? {});
+    return parsed.success ? parsed.data.hiddenCalendarIds : [];
+  }, [settings]);
+
+  const today = localDateKey(new Date());
+
   const queryInput = useMemo(() => {
     const { timeMin, timeMax } = getRange(view, date);
-    return { timeMin: timeMin.toISOString(), timeMax: timeMax.toISOString(), maxResults: 250 };
-  }, [view, date]);
+    return {
+      timeMin: timeMin.toISOString(),
+      timeMax: timeMax.toISOString(),
+      timeMinDate: localDateKey(timeMin),
+      timeMaxDate: localDateKey(timeMax),
+      today,
+      maxResults: 250,
+      excludeCalendarIds: hiddenCalendarIds,
+    };
+  }, [view, date, hiddenCalendarIds, today]);
 
   const events = trpc.calendar.getEvents.useQuery(queryInput, {
     enabled: hasCalendar,
@@ -95,7 +122,7 @@ const CalendarWidget: React.FC<WidgetComponentProps> = ({ className }) => {
   }
 
   const calendarEvents: CalendarEvent[] =
-    events.data?.map((event) => ({
+    events.data?.events.map((event) => ({
       id: event.id,
       title: event.title,
       start: parseDate(event.start, event.allDay),
@@ -103,17 +130,41 @@ const CalendarWidget: React.FC<WidgetComponentProps> = ({ className }) => {
       allDay: event.allDay,
       location: event.location ?? undefined,
       htmlLink: event.htmlLink ?? undefined,
+      eventType: event.eventType,
+      color: event.color,
+      foregroundColor: event.foregroundColor,
     })) ?? [];
 
+  const tasksError = events.data?.tasksError ?? null;
+
   return (
-    <CalendarViews
-      className={className}
-      events={calendarEvents}
-      view={view}
-      onView={setView}
-      date={date}
-      onNavigate={setDate}
-    />
+    <div className={cn("flex h-full flex-col gap-1", className)}>
+      {tasksError ? (
+        <div className="flex items-center gap-2 rounded border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-xs text-foreground">
+          <span className="min-w-0 flex-1">{TASKS_ERROR_MESSAGES[tasksError]}</span>
+          {tasksError === "scope" ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-6 px-2 text-xs"
+              onClick={() => void signIn("google", { callbackUrl: "/" })}
+            >
+              Reconnect
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+      <div className="min-h-0 flex-1">
+        <CalendarViews
+          events={calendarEvents}
+          view={view}
+          onView={setView}
+          date={date}
+          onNavigate={setDate}
+        />
+      </div>
+    </div>
   );
 };
 

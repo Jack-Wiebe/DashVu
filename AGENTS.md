@@ -202,6 +202,27 @@ add Vitest/Playwright with tests colocated next to source. When adding a test sc
 - Google Calendar uses `react-big-calendar` (month/week/day) + `moment`; the widget fetches events via
   `calendar.getEvents` and shows a reconnect prompt when `hasCalendar` is false. Enabling the Google
   Calendar API + consent-screen scope is a manual Cloud console step (see `.env.example`).
+  `calendar.getEvents` fans out over the user's **entire calendar list** (`calendarList.list` with
+  `showHidden: true`, including shared/subscribed/hidden calendars; `freeBusyReader` entries are
+  filtered out in code) with bounded concurrency + a 60s per-calendar cache; `calendar.listCalendars`
+  backs the per-instance filter. `widgetGroup.settings.hiddenCalendarIds` is an **exclude list** (all
+  calendars shown by default, new ones appear automatically), editable in the Settings drawer → Widget
+  settings → Calendars. Events carry `color`/`foregroundColor` from their calendar (applied via
+  `eventPropGetter`) and a compound `id` (`<calendarId>:<eventId>`) to avoid cross-calendar collisions.
+  Two **synthetic** calendars are exposed alongside the real ones: `__birthdays__` ("Birthdays") is
+  derived from Primary's `eventType: "birthday"` events (Primary is fetched even when hidden so
+  Birthdays still works), and `__tasks__` ("Tasks") comes from the Google Tasks API via
+  `getTasksClientForUser` — each dated task becomes an all-day event on its `due` date, and undated
+  tasks appear on the client-local `today`. (`due` is the scheduled date; the newer Google Tasks UI
+  "deadline" is not exposed by the API, so task events link to the task via `webViewLink` instead.)
+  The client sends `timeMinDate`/`timeMaxDate`/`today` as
+  `YYYY-MM-DD` to avoid UTC boundary bugs; tasks are fetched unfiltered and range-filtered server-side
+  because the Tasks API drops undated tasks when `dueMin`/`dueMax` are set). Tasks require the
+  `tasks.readonly` scope (`hasTasks` in the session); enabling the Google Tasks API + scope on the
+  consent screen is a manual Cloud console step, then the user must re-connect Google once.
+  `calendar.getEvents` returns `{ events, tasksError }` (`tasksError` is `"disabled" | "scope" |
+"unknown" | null`) so the widget can show an inline hint (with a reconnect action for `scope`)
+  instead of failing silently.
 - Phase 4 (in progress): user config now persists (`dashboard`/`widget`). Stage 1 shipped the widget
   registry, `dashboard.saveLayout`, and an edit mode with add/remove/reorder + optimistic auto-save.
   Stage 2 replaced reorder buttons with drag-and-drop via `@dnd-kit` (sortable, `rectSortingStrategy`,

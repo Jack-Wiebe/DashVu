@@ -353,6 +353,9 @@ importers:
       '@googleapis/calendar':
         specifier: ^20.1.0
         version: 20.1.0(supports-color@7.2.0)
+      '@googleapis/tasks':
+        specifier: ^17.1.0
+        version: 17.1.0(supports-color@7.2.0)
       '@trpc/server':
         specifier: ^11.0.0
         version: 11.19.0(typescript@5.9.3)
@@ -903,6 +906,10 @@ packages:
 
   '@googleapis/calendar@20.1.0':
     resolution: {integrity: sha512-bPO9wts48OAEhJn5UfgPC4FuyW/D6ufUzdXx0JHfeJIqg+O5bHvX/TenaAdbJuGhluhn5FLlyl6HzuhE4rFJqw==}
+    engines: {node: '>=22.0.0'}
+
+  '@googleapis/tasks@17.1.0':
+    resolution: {integrity: sha512-oXWQEni73nmIS/BL/OugJM4DWykOIiNxS78DNAIskyo6F+Tkv6ErVlGR7oReiLPEjS76ZzXZH648CB2hYPaKiA==}
     engines: {node: '>=22.0.0'}
 
   '@humanwhocodes/config-array@0.13.0':
@@ -4659,6 +4666,12 @@ snapshots:
   '@floating-ui/utils@0.2.12': {}
 
   '@googleapis/calendar@20.1.0(supports-color@7.2.0)':
+    dependencies:
+      googleapis-common: 9.2.0(supports-color@7.2.0)
+    transitivePeerDependencies:
+      - supports-color
+
+  '@googleapis/tasks@17.1.0(supports-color@7.2.0)':
     dependencies:
       googleapis-common: 9.2.0(supports-color@7.2.0)
     transitivePeerDependencies:

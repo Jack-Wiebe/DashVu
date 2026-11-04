@@ -8,6 +8,7 @@ export interface SessionUser {
   image?: string | null;
   hasSpotify?: boolean;
   hasCalendar?: boolean;
+  hasTasks?: boolean;
 }
 
 export interface Context {

@@ -26,9 +26,11 @@ const googleScopes = [
   "profile",
   "email",
   "https://www.googleapis.com/auth/calendar.readonly",
+  "https://www.googleapis.com/auth/tasks.readonly",
 ].join(" ");
 
 const calendarScope = "https://www.googleapis.com/auth/calendar";
+const tasksScope = "https://www.googleapis.com/auth/tasks";
 
 export const authConfig = {
   adapter: DrizzleAdapter(db, {
@@ -103,6 +105,11 @@ export const authConfig = {
         (account) =>
           account.provider === "google" &&
           Boolean(account.scope?.split(" ").some((value) => value.startsWith(calendarScope)))
+      );
+      session.user.hasTasks = linked.some(
+        (account) =>
+          account.provider === "google" &&
+          Boolean(account.scope?.split(" ").some((value) => value.startsWith(tasksScope)))
       );
 
       return session;

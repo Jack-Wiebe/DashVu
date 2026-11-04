@@ -19,6 +19,9 @@ export interface CalendarEvent {
   allDay?: boolean;
   location?: string;
   htmlLink?: string;
+  eventType?: string;
+  color?: string | null;
+  foregroundColor?: string | null;
 }
 
 interface CalendarViewsProps {
@@ -73,6 +76,19 @@ const CalendarViews = ({
     onNavigate(next);
   };
 
+  const eventPropGetter = (event: object) => {
+    const { color, foregroundColor } = event as CalendarEvent;
+    if (!color) return {};
+
+    return {
+      style: {
+        backgroundColor: color,
+        borderColor: color,
+        color: foregroundColor ?? undefined,
+      },
+    };
+  };
+
   return (
     <div className={cn("dashvu-calendar relative h-full overflow-hidden", className)}>
       <Calendar
@@ -86,6 +102,7 @@ const CalendarViews = ({
         onView={handleView}
         onNavigate={handleNavigate}
         onSelectEvent={(event: CalendarEvent) => setSelected(event)}
+        eventPropGetter={eventPropGetter}
         popup
         style={{ height: "100%" }}
       />
@@ -132,7 +149,7 @@ const CalendarViews = ({
                 className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-emerald-400 transition-colors hover:text-emerald-300"
               >
                 <ExternalLink className="h-3.5 w-3.5" />
-                Open in Google Calendar
+                {selected.eventType === "task" ? "Open in Google Tasks" : "Open in Google Calendar"}
               </a>
             ) : null}
           </div>

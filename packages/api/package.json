@@ -16,6 +16,7 @@
     "@dashvu/db": "workspace:*",
     "@dashvu/validators": "workspace:*",
     "@googleapis/calendar": "^20.1.0",
+    "@googleapis/tasks": "^17.1.0",
     "@trpc/server": "^11.0.0",
     "drizzle-orm": "^0.45.2",
     "fast-xml-parser": "^5.7.0",

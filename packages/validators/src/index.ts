@@ -7,6 +7,7 @@ import { z } from "zod";
  * so input rules live in exactly one place.
  */
 
+export * from "./calendar";
 export * from "./connector";
 export * from "./planner";
 export * from "./news";
@@ -105,16 +106,6 @@ export const DEFAULT_WIDGET_LAYOUT: Array<{
   { kind: "gallery", title: "Gallery", size: "1w1h", position: 1 },
   { kind: "calendar", title: "Calendar", size: "2w1h", position: 2 },
 ];
-
-export const calendarEventsInputSchema = z
-  .object({
-    timeMin: z.string().datetime().optional(),
-    timeMax: z.string().datetime().optional(),
-    maxResults: z.number().int().min(1).max(250).optional(),
-  })
-  .default({});
-
-export type CalendarEventsInput = z.infer<typeof calendarEventsInputSchema>;
 
 export const weatherCurrentInputSchema = z.object({
   latitude: z.number().min(-90).max(90),

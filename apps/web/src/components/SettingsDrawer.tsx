@@ -1,10 +1,11 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { signOut, useSession } from "next-auth/react";
+import { signIn, signOut, useSession } from "next-auth/react";
 import { Check, LogOut, Minus, Plus } from "lucide-react";
 import { parseWidgetSize, widgetSize } from "@dashvu/core";
 import {
+  calendarSettingsSchema,
   MAX_WIDGET_HEIGHT,
   MAX_WIDGET_WIDTH,
   type WidgetKind,
@@ -158,9 +159,105 @@ const SizeField = ({
   );
 };
 
+const CalendarSettingsSection = ({
+  settings,
+  onChange,
+}: {
+  settings: Record<string, unknown> | null;
+  onChange: (settings: Record<string, unknown>) => void;
+}) => {
+  const { data: session } = useSession();
+  const hasCalendar = Boolean(session?.user.hasCalendar);
+  const hasTasks = Boolean(session?.user.hasTasks);
+
+  const calendars = trpc.calendar.listCalendars.useQuery(undefined, {
+    enabled: hasCalendar,
+    retry: false,
+  });
+
+  const parsed = calendarSettingsSchema.safeParse(settings ?? {});
+  const hidden = parsed.success ? parsed.data.hiddenCalendarIds : [];
+
+  const toggle = (id: string, visible: boolean) => {
+    const next = visible ? hidden.filter((entry) => entry !== id) : [...hidden, id];
+    onChange({ ...(settings ?? {}), hiddenCalendarIds: next });
+  };
+
+  return (
+    <Section title="Calendars">
+      {!hasCalendar ? (
+        <p className="text-xs text-muted-foreground">
+          Connect Google Calendar to choose which calendars this widget shows.
+        </p>
+      ) : calendars.isLoading ? (
+        <p className="text-xs text-muted-foreground">Loading calendars…</p>
+      ) : calendars.isError ? (
+        <p className="text-xs text-muted-foreground">Could not load calendars.</p>
+      ) : (calendars.data ?? []).length === 0 ? (
+        <p className="text-xs text-muted-foreground">No calendars found.</p>
+      ) : (
+        <div className="flex flex-col gap-1">
+          {(calendars.data ?? []).map((calendar) => {
+            const visible = !hidden.includes(calendar.id);
+
+            return (
+              <div
+                key={calendar.id}
+                className="flex items-center justify-between gap-2 rounded-md border border-border px-2 py-1.5"
+              >
+                <span className="flex min-w-0 items-center gap-2">
+                  <span
+                    className="h-3 w-3 shrink-0 rounded-full border border-border"
+                    style={calendar.color ? { backgroundColor: calendar.color } : undefined}
+                  />
+                  <span className="truncate text-sm text-foreground">{calendar.name}</span>
+                  {calendar.primary ? (
+                    <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                      Primary
+                    </span>
+                  ) : null}
+                </span>
+                <Switch
+                  aria-label={`Show ${calendar.name}`}
+                  checked={visible}
+                  onCheckedChange={(next) => toggle(calendar.id, next)}
+                />
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <p className="text-xs text-muted-foreground">
+        Turn off calendars to hide them from this widget. New calendars appear automatically.
+      </p>
+      {hasCalendar && !hasTasks ? (
+        <div className="flex flex-col gap-2">
+          <p className="text-xs text-muted-foreground">Reconnect Google to include Tasks.</p>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="self-start"
+            onClick={() => void signIn("google", { callbackUrl: "/" })}
+          >
+            Reconnect Google
+          </Button>
+        </div>
+      ) : null}
+    </Section>
+  );
+};
+
 const WidgetSettingsPanel = ({ widgetId }: { widgetId: string }) => {
-  const { widgets, resizeWidget, renameInstance, setWidgetInstance, createInstance, saving } =
-    useDashboards();
+  const {
+    widgets,
+    resizeWidget,
+    updateSettings,
+    renameInstance,
+    setWidgetInstance,
+    createInstance,
+    saving,
+  } = useDashboards();
   const widget = widgets.find((entry) => entry.id === widgetId);
 
   const [name, setName] = useState(widget?.title ?? "");
@@ -223,6 +320,13 @@ const WidgetSettingsPanel = ({ widgetId }: { widgetId: string }) => {
           onResize={(token) => resizeWidget(widget.id, token)}
         />
       </Section>
+
+      {widget.kind === "calendar" ? (
+        <CalendarSettingsSection
+          settings={widget.settings}
+          onChange={(next) => updateSettings(widget.id, next)}
+        />
+      ) : null}
 
       <Section title="Instance">
         <Field

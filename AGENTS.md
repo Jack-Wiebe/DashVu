@@ -266,8 +266,11 @@ app runnable after each change.
 - Playback bar uses local progress interpolation between polls and corrects on each poll; anchor to
   the local receipt time (`dataUpdatedAt`), not Spotify's server `timestamp`.
 - Add a device selector in the widget header.
-- `NO_ACTIVE_DEVICE` shows available devices plus a hint to open Spotify on a device.
-- Selecting a device transfers playback.
+- Devices and playback state refresh every 5s while the selector is open; `NO_ACTIVE_DEVICE` shows
+  available devices plus a hint to open Spotify on a device.
+- Selecting a device derives the desired play/pause state from live playback before transferring
+  (playing starts immediately on the new device; paused stays paused), then polls until the new
+  device, track, and play state are reflected. Transfer errors stay inline in the selector.
 
 **Gallery**
 
@@ -310,19 +313,7 @@ app runnable after each change.
 
 ### Phase 1 — Bugs and quick wins
 
-#### 1. Spotify device selector
-
-- Add a device control to the widget header.
-- Fetch devices when the menu opens and refresh with playback state.
-- Show `NO_ACTIVE_DEVICE` as a device list plus an "Open Spotify on a device" hint.
-- Add/transfer playback support.
-- Keep device errors scoped to the selector, not the whole widget.
-
-Acceptance: users can see and choose available devices; selecting a device transfers playback; a new
-device login no longer leaves the widget with no options; `NO_ACTIVE_DEVICE` is actionable, not just a
-toast.
-
-#### 2. Topbar drag via dots
+#### 1. Topbar drag via dots
 
 Files: `apps/web/src/components/NavBar.tsx`.
 
@@ -334,7 +325,7 @@ Files: `apps/web/src/components/NavBar.tsx`.
 Acceptance: dragging the dots reorders tabs; clicking the dots still opens the menu; tab name drag
 still works; order persists after reload.
 
-#### 3. Smoke-test resolved items
+#### 2. Smoke-test resolved items
 
 - Settings: outside click and Esc close app/widget drawers.
 - Instancing: create/select/update instance persists without reload.

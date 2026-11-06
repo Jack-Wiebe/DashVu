@@ -3,17 +3,23 @@
 import { useEffect, useRef, useState } from "react";
 import * as Progress from "@radix-ui/react-progress";
 import {
+  Car,
   Check,
   ChevronDown,
   ChevronFirst,
   ChevronLast,
   ListMusic,
   Loader2,
+  Monitor,
+  MonitorSmartphone,
   Pause,
   Play,
   Repeat1,
   Repeat2,
   Shuffle,
+  Smartphone,
+  Speaker,
+  Tv,
 } from "lucide-react";
 import Image from "next/image";
 import { signIn, useSession } from "next-auth/react";
@@ -39,6 +45,34 @@ const repeatNext: Record<RepeatState, RepeatState> = {
   context: "track",
   track: "off",
 };
+
+function DeviceIcon({ type }: { type: string | undefined }) {
+  const kind = type?.toLowerCase();
+  const Icon =
+    kind === "computer"
+      ? Monitor
+      : kind === "smartphone" || kind === "tablet"
+        ? Smartphone
+        : kind === "speaker" || kind === "castaudio" || kind === "audiodongle"
+          ? Speaker
+          : kind === "tv"
+            ? Tv
+            : kind === "automobile"
+              ? Car
+              : MonitorSmartphone;
+  return <Icon className="h-4 w-4 shrink-0" />;
+}
+
+function formatDeviceError(reason: string | null) {
+  if (!reason) return null;
+  if (reason === "NO_ACTIVE_DEVICE") {
+    return "No active device. Open Spotify on a device first.";
+  }
+  if (reason === "PREMIUM_REQUIRED") {
+    return "Spotify Premium is required to switch devices.";
+  }
+  return reason;
+}
 
 function getInterpolatedProgressMs(
   data: { progress_ms?: number | null; is_playing?: boolean } | null | undefined,
@@ -68,16 +102,25 @@ const SpotifyWidget: React.FC<WidgetComponentProps> = ({ className }) => {
   const { toast } = useToast();
   const utils = trpc.useUtils();
   const [playbackStarting, setPlaybackStarting] = useState(false);
+  const [devicesOpen, setDevicesOpen] = useState(false);
+  const [deviceError, setDeviceError] = useState<string | null>(null);
 
   const playback = trpc.spotify.getPlaybackState.useQuery(undefined, {
     enabled: hasSpotify,
-    refetchInterval: 10_000,
+    refetchInterval: devicesOpen ? 5_000 : 10_000,
     retry: false,
   });
 
   const playlists = trpc.spotify.getPlaylists.useQuery(undefined, {
     enabled: hasSpotify,
     retry: false,
+  });
+
+  const devices = trpc.spotify.getDevices.useQuery(undefined, {
+    enabled: hasSpotify && devicesOpen,
+    staleTime: 0,
+    retry: false,
+    refetchInterval: devicesOpen ? 5_000 : false,
   });
 
   const dataIsPlaying = playback.data?.is_playing ?? false;
@@ -95,10 +138,13 @@ const SpotifyWidget: React.FC<WidgetComponentProps> = ({ className }) => {
       old ? { ...old, ...patch, progress_ms } : old
     );
   };
-  const retryUntil = async (isDone: (data: NonNullable<typeof playback.data>) => boolean) => {
+  const retryUntil = async (
+    isDone: (data: NonNullable<typeof playback.data>) => boolean,
+    attempts = 6
+  ) => {
     setPlaybackStarting(true);
     try {
-      for (let attempt = 0; attempt < 6; attempt++) {
+      for (let attempt = 0; attempt < attempts; attempt++) {
         await playback.refetch();
         const data = utils.spotify.getPlaybackState.getData();
         if (data && isDone(data)) return;
@@ -201,6 +247,34 @@ const SpotifyWidget: React.FC<WidgetComponentProps> = ({ className }) => {
     },
     onSettled: makeHandleResult(false),
   });
+  const transferPlayback = trpc.spotify.transferPlayback.useMutation({
+    onMutate: () => setDeviceError(null),
+    onSuccess: (result, variables) => {
+      if (!result.ok) {
+        setDeviceError(result.reason ?? "Unable to switch device.");
+        refresh();
+        return;
+      }
+      setDevicesOpen(false);
+      const shouldPlay = result.playing ?? variables.play ?? false;
+      void retryUntil(
+        (data) => data.device?.id === variables.deviceId && data.is_playing === shouldPlay,
+        8
+      );
+    },
+    onError: () => {
+      setDeviceError("Unable to switch device.");
+      refresh();
+    },
+  });
+  const handleDevicesOpenChange = (open: boolean) => {
+    setDevicesOpen(open);
+    if (open) {
+      setDeviceError(null);
+      transferPlayback.reset();
+      refresh();
+    }
+  };
 
   if (status === "loading") {
     return <div className={cn(className, "text-sm")}>Loading…</div>;
@@ -236,6 +310,17 @@ const SpotifyWidget: React.FC<WidgetComponentProps> = ({ className }) => {
   const currentContextUri = playback.data?.context_uri ?? playback.data?.context?.uri ?? null;
   const shuffleState = playback.data?.shuffle_state ?? false;
   const repeatState = playback.data?.repeat_state ?? "off";
+  const activeDevice = devicesOpen
+    ? (devices.data?.find((device) => device.is_active && device.id) ??
+      playback.data?.device ??
+      null)
+    : (playback.data?.device ?? null);
+  const activeDeviceId = activeDevice?.id ?? null;
+  const activeDeviceName = activeDevice?.name ?? null;
+  const deviceErrorMessage = formatDeviceError(deviceError);
+  const devicesList = (devices.data ?? [])
+    .flatMap((device) => (device.id ? [{ ...device, id: device.id }] : []))
+    .sort((a, b) => Number(b.is_active) - Number(a.is_active) || a.name.localeCompare(b.name));
 
   return (
     <div className={cn(className, "flex flex-col gap-4 text-sm")}>
@@ -274,52 +359,137 @@ const SpotifyWidget: React.FC<WidgetComponentProps> = ({ className }) => {
           </div>
         ) : null}
 
-        <DropdownMenu modal={false}>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              className="absolute right-0 top-0 flex max-w-[45%] items-center gap-1.5 overflow-clip rounded px-1 py-0.5 text-[11px] text-muted-foreground transition-colors hover:text-foreground focus:outline-none"
-            >
-              <ListMusic className="h-3.5 w-3.5 shrink-0" />
-              <span className="truncate">{trackContextName ?? "Playlists"}</span>
-              <ChevronDown className="h-3 w-3 shrink-0" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="max-h-72 w-56 overflow-y-auto" align="end">
-            <DropdownMenuLabel>Playlists</DropdownMenuLabel>
-            {playlists.isLoading ? (
-              <DropdownMenuItem disabled>Loading…</DropdownMenuItem>
-            ) : playlists.error ? (
-              <DropdownMenuItem disabled>Failed to load playlists.</DropdownMenuItem>
-            ) : (
-              playlists.data?.map((playlist) => (
+        <div className="absolute right-0 top-0 flex max-w-[60%] items-center justify-end gap-1">
+          <DropdownMenu modal={false} open={devicesOpen} onOpenChange={handleDevicesOpenChange}>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className={cn(
+                  "flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:text-foreground focus:outline-none",
+                  !activeDeviceId && "text-amber-500 hover:text-amber-400"
+                )}
+                aria-label={
+                  activeDeviceName ? `Select device (${activeDeviceName})` : "Select Spotify device"
+                }
+                title={activeDeviceName ? `Device: ${activeDeviceName}` : "No active device"}
+              >
+                {transferPlayback.isPending ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <MonitorSmartphone className="h-3.5 w-3.5" />
+                )}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="max-h-72 w-60 overflow-y-auto" align="end">
+              <DropdownMenuLabel>Devices</DropdownMenuLabel>
+              {!activeDeviceId ? (
+                <p className="px-2 pb-1.5 text-xs text-muted-foreground">
+                  No active device. Open Spotify on a device or pick one below.
+                </p>
+              ) : null}
+              {deviceErrorMessage ? (
+                <p className="px-2 pb-1.5 text-xs text-destructive">{deviceErrorMessage}</p>
+              ) : null}
+              {devices.isLoading ? (
+                <DropdownMenuItem disabled>Loading…</DropdownMenuItem>
+              ) : devices.error ? (
+                <DropdownMenuItem disabled>Failed to load devices.</DropdownMenuItem>
+              ) : devicesList.length === 0 ? (
+                <DropdownMenuItem disabled>
+                  No devices found. Open Spotify on a device.
+                </DropdownMenuItem>
+              ) : (
+                devicesList.map((device) => {
+                  const isActive = device.id === activeDeviceId;
+                  const isSwitching =
+                    transferPlayback.isPending &&
+                    transferPlayback.variables?.deviceId === device.id;
+                  return (
+                    <DropdownMenuItem
+                      key={device.id}
+                      disabled={isActive || transferPlayback.isPending || device.is_restricted}
+                      onSelect={(event) => {
+                        event.preventDefault();
+                        transferPlayback.mutate({
+                          deviceId: device.id,
+                          play: playback.data?.is_playing ?? false,
+                        });
+                      }}
+                    >
+                      <DeviceIcon type={device.type} />
+                      <span className="truncate">{device.name}</span>
+                      <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">
+                        {device.is_restricted ? "Restricted" : device.type}
+                      </span>
+                      {isSwitching ? (
+                        <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+                      ) : isActive ? (
+                        <Check className="h-4 w-4 shrink-0" />
+                      ) : null}
+                    </DropdownMenuItem>
+                  );
+                })
+              )}
+              {devices.error ? (
                 <DropdownMenuItem
-                  key={playlist.uri}
-                  onClick={() => {
-                    if (playlist.uri === currentContextUri) return;
-                    playContext.mutate({ uri: playlist.uri });
+                  onSelect={(event) => {
+                    event.preventDefault();
+                    void devices.refetch();
                   }}
                 >
-                  {playlist.imageUrl ? (
-                    <Image
-                      src={playlist.imageUrl}
-                      alt=""
-                      width={20}
-                      height={20}
-                      className="h-5 w-5 shrink-0 rounded-sm"
-                    />
-                  ) : (
-                    <div className="h-5 w-5 shrink-0 rounded-sm bg-muted" />
-                  )}
-                  <span className="truncate">{playlist.name}</span>
-                  {playlist.uri === currentContextUri ? (
-                    <Check className="ml-auto h-4 w-4 shrink-0" />
-                  ) : null}
+                  Retry
                 </DropdownMenuItem>
-              ))
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="flex min-w-0 items-center gap-1.5 overflow-clip rounded px-1 py-0.5 text-[11px] text-muted-foreground transition-colors hover:text-foreground focus:outline-none"
+              >
+                <ListMusic className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">{trackContextName ?? "Playlists"}</span>
+                <ChevronDown className="h-3 w-3 shrink-0" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="max-h-72 w-56 overflow-y-auto" align="end">
+              <DropdownMenuLabel>Playlists</DropdownMenuLabel>
+              {playlists.isLoading ? (
+                <DropdownMenuItem disabled>Loading…</DropdownMenuItem>
+              ) : playlists.error ? (
+                <DropdownMenuItem disabled>Failed to load playlists.</DropdownMenuItem>
+              ) : (
+                playlists.data?.map((playlist) => (
+                  <DropdownMenuItem
+                    key={playlist.uri}
+                    onClick={() => {
+                      if (playlist.uri === currentContextUri) return;
+                      playContext.mutate({ uri: playlist.uri });
+                    }}
+                  >
+                    {playlist.imageUrl ? (
+                      <Image
+                        src={playlist.imageUrl}
+                        alt=""
+                        width={20}
+                        height={20}
+                        className="h-5 w-5 shrink-0 rounded-sm"
+                      />
+                    ) : (
+                      <div className="h-5 w-5 shrink-0 rounded-sm bg-muted" />
+                    )}
+                    <span className="truncate">{playlist.name}</span>
+                    {playlist.uri === currentContextUri ? (
+                      <Check className="ml-auto h-4 w-4 shrink-0" />
+                    ) : null}
+                  </DropdownMenuItem>
+                ))
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       <div id="Track Info" className="flex shrink-0 flex-col items-center gap-1 text-center">

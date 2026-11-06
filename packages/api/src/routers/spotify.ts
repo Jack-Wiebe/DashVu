@@ -81,6 +81,7 @@ async function resumeDevice(api: SpotifyWebApi, userId: string): Promise<string 
 }
 
 type ControlResult = { ok: boolean; reason?: string };
+type TransferResult = ControlResult & { playing?: boolean };
 
 function spotifyErrorReason(e: unknown): string | null {
   return (e as { body?: { error?: { reason?: string } } })?.body?.error?.reason ?? null;
@@ -248,10 +249,25 @@ export const spotifyRouter = router({
   }),
 
   transferPlayback: protectedProcedure
-    .input(z.object({ deviceId: z.string().min(1) }))
-    .mutation(async ({ ctx, input }) => {
+    .input(z.object({ deviceId: z.string().min(1), play: z.boolean().optional() }))
+    .mutation(async ({ ctx, input }): Promise<TransferResult> => {
       const api = await getApi(ctx.session.user.id);
-      await api.transferMyPlayback([input.deviceId]);
-      return { ok: true } as const;
+      let shouldPlay = input.play ?? false;
+      try {
+        const { body } = await api.getMyCurrentPlaybackState();
+        shouldPlay = body?.is_playing ?? false;
+      } catch {
+        shouldPlay = input.play ?? false;
+      }
+      try {
+        await api.transferMyPlayback([input.deviceId], { play: shouldPlay });
+        await rememberActiveDevice(ctx.session.user.id, input.deviceId);
+        return { ok: true, playing: shouldPlay };
+      } catch (error) {
+        return {
+          ok: false,
+          reason: spotifyErrorReason(error) ?? "Unable to switch device.",
+        };
+      }
     }),
 });

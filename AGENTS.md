@@ -158,7 +158,9 @@ defaultSize }`); `Widget.tsx` resolves the component/icon from there. The `kind`
   `origin`/`stops` settings are migrated on load; the UI labels the list "Stops"). The Leaflet canvas
   (`MapCanvas.tsx`) is dynamic-`ssr:false` like `WeatherRadar.tsx` and uses `Marker` + `divIcon` (so markers
   are draggable) and `Polyline` (no marker-icon assets); it is `isolate`d so Leaflet's internal z-indexes
-  can't paint over modals/dropdowns. The widget's search box lives inside the active-point banner (rendered
+  can't paint over modals/dropdowns. The Leaflet container is a dedicated child with a **stable
+  className**; never put dynamic React classes or React children on it, or React will overwrite
+  Leaflet's classes and blank the map. The widget's search box lives inside the active-point banner (rendered
   only while adding/editing a point) and follows the shared search pattern above; the map is resizable
   (drag handle, session-persisted) and the stops list fills the remaining height.
 - When overriding `authorization` on a provider whose default is a **string** (e.g. Spotify:
@@ -236,6 +238,310 @@ add Vitest/Playwright with tests colocated next to source. When adding a test sc
   Theming is a Light/Dark registry (`lib/themes.ts`) applied on `<html>` by `PreferencesProvider`
   (theme + reduce-motion, persisted via `user.updatePreferences`). Still TODO: export/import layout,
   richer per-widget settings fields.
+
+## Phased Roadmap
+
+This roadmap captures the decisions made for the next DashVu phases. It supersedes the
+"Phase 4 (in progress)" note above for upcoming work. Implement one phase at a time and keep the
+app runnable after each change.
+
+### Locked decisions
+
+**Map**
+
+- Optimize already works; keep it.
+- Any point can be pinned. Start/end are fixed by default.
+- Multiple pinned middle stops keep their exact positions; unpinned stops optimize around them.
+- If routing optimization fails, use a local nearest-neighbor fallback.
+- Saved locations are separate from trip pins: per-user reusable places, added from a route point,
+  surfaced in a quick-add list.
+- Adding a stop uses an always-visible search box plus a `+` button that unlocks click-to-add mode
+  with a visible pin/cursor cue.
+- `Use my location` moves into the search bar and adds a stop.
+- New map instances start with current location as origin; denied geolocation falls back to last
+  known; permission is requested once.
+
+**Spotify**
+
+- Playback bar uses local progress interpolation between polls and corrects on each poll.
+- Add a device selector in the widget header.
+- `NO_ACTIVE_DEVICE` shows available devices plus a hint to open Spotify on a device.
+- Selecting a device transfers playback.
+
+**Gallery**
+
+- Use an S3-compatible storage adapter. Cloudflare R2 is the recommended free target: 10 GB
+  storage, 1M writes, 10M reads, free egress. Provider remains swappable.
+- Per-user image library; private signed URLs.
+- Limits: 10 MB per image, 100 images per user.
+- Presigned direct upload; server-generated thumbnails via a finalize endpoint using `sharp`.
+- One upload at a time; JPEG/PNG/WebP.
+- Thumbnail-grid library UI.
+- Uploading keeps the current image; if none exists, use the newest upload.
+- Existing local/Data-URL images have no real data, so remove that path.
+- Persist filter, parameter, source, and current image per widget instance. Random images restore
+  the filter but load a fresh image; uploaded images restore the exact image.
+
+**Fun Pack**
+
+- New packs: meditation, affirmations, learnings, vocabulary, history/news.
+- Per-instance config; hide disabled packs and skip their fetches.
+- Users can enable/disable, reorder, choose category, and choose item count.
+- Text + links; manual shuffle only.
+- APIs + local fallback.
+- Sources: Human Concepts for meditation, affirmations.dev for affirmations, Wikipedia random for
+  learnings, local word list + dictionaryapi.dev for vocabulary, existing Wikimedia On This Day for
+  history/news.
+
+**Calendar**
+
+- Month view only.
+- Clicking `+N more` opens a day agenda modal.
+- Clicking an event inside expands details inline.
+- Agenda content matches the existing event details modal.
+- Mobile behavior stays a centered, scrollable modal for now.
+
+**Topbar**
+
+- Both the tab name and the three-dot button drag.
+- A click on the dots still opens Rename/Delete.
+- Keep the three-dot icon as the visual affordance.
+
+### Phase 1 — Bugs and quick wins
+
+#### 1. Spotify progress interpolation
+
+Files: `apps/web/src/components/widgets/SpotifyWidget.tsx`,
+`packages/api/src/routers/spotify.ts`.
+
+- Track `progress_ms`, `is_playing`, and the response timestamp.
+- Advance the displayed progress locally between polls.
+- Reset interpolation on track change, pause, seek, skip, or new poll.
+- Do not show progress past track duration.
+
+Acceptance: progress moves smoothly during playback; pause/seek/skip resync correctly; the bar never
+exceeds the track length.
+
+#### 2. Spotify device selector
+
+- Add a device control to the widget header.
+- Fetch devices when the menu opens and refresh with playback state.
+- Show `NO_ACTIVE_DEVICE` as a device list plus an "Open Spotify on a device" hint.
+- Add/transfer playback support.
+- Keep device errors scoped to the selector, not the whole widget.
+
+Acceptance: users can see and choose available devices; selecting a device transfers playback; a new
+device login no longer leaves the widget with no options; `NO_ACTIVE_DEVICE` is actionable, not just a
+toast.
+
+#### 3. Topbar drag via dots
+
+Files: `apps/web/src/components/NavBar.tsx`.
+
+- Attach dnd-kit listeners/attributes to the three-dot trigger as well as the tab name.
+- Keep normal click opening the Rename/Delete menu.
+- Use the existing activation distance so click vs drag is distinguishable.
+- Keep reordering gated to edit mode.
+
+Acceptance: dragging the dots reorders tabs; clicking the dots still opens the menu; tab name drag
+still works; order persists after reload.
+
+#### 4. Smoke-test resolved items
+
+- Settings: outside click and Esc close app/widget drawers.
+- Instancing: create/select/update instance persists without reload.
+- Edit controls: settings/remove/resize still work after widget drag.
+
+### Phase 2 — Map UX
+
+#### 1. Extend map settings
+
+Files: `packages/validators/src/map.ts`, `apps/web/src/components/widgets/MapWidget.tsx`,
+`packages/db/src/schema.ts` if needed.
+
+Add to per-instance settings: `pinnedIds: string[]` and
+`lastKnownLocation?: { lat, lon, label? }`. Keep existing `mode`, `points`, `favourites`.
+
+#### 2. Pinning and optimization
+
+- Add a pin toggle on every stop row; keep start/end visually distinct as fixed endpoints.
+- Default optimize constraints: first + last fixed.
+- Pinned middle stops stay at their exact index.
+- Optimize each segment between fixed anchors independently; concatenate results.
+- Extend `map.optimize` input to accept fixed/pinned indices.
+- Add local nearest-neighbor fallback if routing optimization fails.
+
+Acceptance: Optimize reorders only allowed stops; start/end remain fixed by default; pinned middle
+stops do not move; unpinned stops optimize around pins; engine failure still produces a usable order.
+
+#### 3. Saved locations
+
+New table `savedLocation` keyed to `user.id`: `id`, `userId`, `label`, `lat`, `lon`, `createdAt`.
+
+Router: `map.listSavedLocations`, `map.createSavedLocation`, `map.renameSavedLocation`,
+`map.removeSavedLocation`.
+
+UI:
+
+- Save an existing route point.
+- Show saved locations only in the quick-add list.
+- One-tap add to the current route.
+- No map layer markers for saved locations.
+
+Acceptance: saved locations are shared across map instances for the same user; adding one creates a
+normal route point; deleting one does not remove it from existing trips; ownership is enforced
+server-side.
+
+#### 4. Add-location flow
+
+- Keep the search bar always visible in the non-scrolling widget area.
+- `+` toggles click-to-add mode, not an immediate add.
+- In click-to-add mode, show a pin/crosshair cursor and add a point only on map click.
+- Clicking `+` again exits the mode.
+- Add `Use my location` inside the search bar; it adds a stop.
+- Selecting a search result adds immediately and exits the mode.
+- Keep the shared search pattern: outside click, Esc, `menuSurfaceClass`.
+
+Acceptance: normal map navigation does not accidentally add points; click-to-add mode is obvious and
+reversible; search is always available; `Use my location` is discoverable and adds a stop; Esc/outside
+click closes results.
+
+#### 5. New-instance current location
+
+- On first map instance with no origin, request browser geolocation once.
+- On success, add current location as origin.
+- On denial/unavailable, use last known location if available; otherwise show the empty prompt.
+- Persist the last known location for reuse.
+- Do not repeatedly prompt after the user denies.
+
+Acceptance: new instances start with current location as origin when allowed; denied permission
+falls back gracefully; no repeated permission prompts on every load.
+
+### Phase 3 — Gallery storage
+
+#### 1. Storage adapter
+
+Create a server-only S3-compatible adapter with `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`,
+`S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`. Default target: Cloudflare R2; provider remains
+swappable. Private bucket; short-lived signed URLs; configure bucket CORS for canvas filtering.
+
+Acceptance: local/dev can point at R2, S3, B2, or MinIO via env; no storage secrets reach the client.
+
+#### 2. Database schema
+
+New table `galleryImage` keyed to `user.id`: `id`, `userId`, `storageKey`, `thumbnailKey`,
+`filename`, `contentType`, `size`, `width`, `height`, `createdAt`.
+
+Rules: cascade on user delete; per-user count/size limits enforced server-side; deleting an image
+deletes both original and thumbnail objects.
+
+#### 3. Router and upload flow
+
+Add `gallery` router: `list`, `createUploadUrl`, `finalizeUpload`, `delete`, `signedUrl`,
+`thumbnailUrl`.
+
+Flow: client requests a presigned PUT; client uploads one file directly; client calls
+`finalizeUpload`; server validates object type/size, generates a thumbnail with `sharp`, stores it,
+and returns metadata. Reject unsupported types: only JPEG/PNG/WebP. Enforce 10 MB and 100 images/user.
+
+Acceptance: upload succeeds without proxying the file through the API; thumbnail appears after
+finalize; oversized/wrong-type files are rejected; users cannot read or delete another user's image.
+
+#### 4. Gallery UI
+
+- Add a thumbnail-grid library dialog.
+- One-at-a-time upload with progress/error state.
+- Delete from the library.
+- Set current image explicitly.
+- Keep the current image after a new upload; if none exists, select the newest.
+- Apply existing canvas filters to uploaded images.
+- Remove the Data-URL upload path.
+
+Acceptance: users can upload, browse, select, and delete images; filters still work on uploaded
+images; upload failures are visible and retryable; no local Data-URL persistence remains.
+
+#### 5. Gallery state persistence
+
+Store per instance in `widgetGroup.settings`: `filterId`, `filterParam`,
+`source: "random" | "upload"`, `currentImageId`, optional `lastRandomUrl`.
+
+Behavior: uploaded source restores the exact image; random source restores the filter but loads a
+fresh image on reload; filter changes persist immediately; add a reset action if needed.
+
+Acceptance: reload restores filter/parameter; uploaded image survives reload; random source does not
+force the same image; state is per gallery instance.
+
+### Phase 4 — Fun Pack expansion
+
+#### 1. Source connectors
+
+Add connectors/wrappers:
+
+- `humanConcepts` for meditation quotes.
+- `affirmationsDev` for affirmations.
+- `wikipediaRandom` for learnings.
+- Vocabulary uses the existing word list + `dictionaryApi`.
+- History/news continues using `wikimediaOnThisDay`.
+
+Fallback: every new pack has a small curated local fallback list. A failed source returns a per-pack
+error/fallback indicator, not an empty widget.
+
+#### 2. Per-instance settings
+
+Add `funPackSettingsSchema` stored in `widgetGroup.settings`:
+`packs: Array<{ id, enabled, order, category?, count }>`. Existing quote/joke/fact/on-this-day become
+pack IDs. New pack IDs: `meditation`, `affirmations`, `learnings`, `vocabulary`, `history`.
+
+UI: settings drawer list with switches, drag reorder, category selector where supported, count
+stepper, and per-pack shuffle.
+
+#### 3. Router behavior
+
+- `funPack.getPack` accepts enabled packs and per-pack options.
+- Skip fetches for disabled packs.
+- Return text + optional link per item.
+- Manual shuffle: refetch only the selected pack.
+- No automatic daily rotation unless explicitly re-added later.
+
+Acceptance: disabled packs are hidden and not fetched; order and count persist per instance; shuffle
+changes only the requested pack; a failing API does not blank the whole widget; links open correctly.
+
+### Phase 5 — Calendar day agenda
+
+Files: `apps/web/src/components/widgets/CalendarViews.tsx`,
+`apps/web/src/components/widgets/CalendarWidget.tsx`.
+
+- Intercept `+N more` / `onShowMore` in month view.
+- Open a custom day agenda modal styled like the event details modal.
+- List all events for the day using the same detail information.
+- Clicking an event expands its details inline within the agenda.
+- Keep existing event-click details for non-agenda clicks.
+- Keep tasks/event links working.
+- Use a centered scrollable modal on mobile for now.
+
+Acceptance: `+N more` opens the day agenda, not the default popup; agenda shows all events for the
+day; inline expansion matches the detail modal content; week/day views are unchanged; Esc/overlay
+close the agenda; task links still say "Open in Google Tasks."
+
+### Cross-cutting work
+
+- DB changes: edit `packages/db/src/schema.ts`, run `pnpm --filter @dashvu/db db:generate`, and commit
+  the generated SQL in `packages/db/drizzle/`.
+- Server-only modules: `import "server-only";` for storage/Spotify/Google.
+- Validate ownership on every gallery/map/fun-pack procedure.
+- No secrets or long-lived signed URLs sent to the client.
+- Update `turbo.json` env declarations for new S3 variables.
+- Update this file for new storage/Fun Pack/map rules.
+- Verification: `pnpm typecheck`, `pnpm lint`, `pnpm format`, plus manual smoke checklist.
+- No git commit/push; maintainer handles all git operations.
+
+### Open technical decisions
+
+- R2 account/credentials and bucket provisioning are still needed before Phase 3 can ship. The S3
+  adapter lets implementation start before the provider is finalized.
+- Confirm `sharp` works in the deployment runtime; if not, move thumbnail generation to a worker.
+- Calendar month-only agenda needs a quick mobile check after implementation.
+- Fun Pack APIs are third-party and may change; local fallbacks are mandatory.
 
 <!-- BEGIN:turborepo-agent-rules -->
 

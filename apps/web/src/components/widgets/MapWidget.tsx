@@ -592,75 +592,9 @@ const MapWidget: React.FC<WidgetComponentProps> = ({
         ))}
       </div>
 
-      {activeId !== null ? (
-        <div ref={searchRef} className="relative shrink-0">
-          <div className="flex items-center gap-2 rounded-md border border-ring bg-accent/50 px-2 py-1">
-            <Crosshair className="h-3.5 w-3.5 shrink-0" />
-            <input
-              ref={searchInputRef}
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Escape") {
-                  setQuery("");
-                  setSearchOpen(false);
-                }
-              }}
-              placeholder={
-                activeId === NEW_POINT ? "Search a place or address…" : "Update location…"
-              }
-              className="min-w-0 flex-1 bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground"
-            />
-            <button
-              type="button"
-              aria-label="Cancel"
-              onClick={() => setActiveId(null)}
-              className="text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          </div>
-
-          {searchOpen && search.data && search.data.length > 0 ? (
-            <ul
-              className={cn(
-                "absolute left-0 top-full z-30 mt-1 max-h-56 w-full overflow-y-auto p-1",
-                menuSurfaceClass
-              )}
-            >
-              {search.data.map((place) => (
-                <li key={place.id} className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => selectResult(place)}
-                    className="min-w-0 flex-1 truncate rounded-sm px-2 py-1 text-left text-xs text-foreground/80 transition-colors hover:bg-accent"
-                  >
-                    {place.label}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => toggleFavourite(place)}
-                    aria-label="Toggle favourite"
-                    title="Toggle favourite"
-                    className="transition-colors hover:text-foreground"
-                  >
-                    <Star
-                      className={cn(
-                        "h-3.5 w-3.5",
-                        isFavourite(place) ? "fill-current text-amber-400" : "text-muted-foreground"
-                      )}
-                    />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </div>
-      ) : null}
-
       <div
         className={cn(
-          "flex min-h-0 flex-col",
+          "relative flex min-h-0 flex-col",
           isExpanded ? "h-[55vh] shrink-0" : panelOpen ? "shrink-0" : "flex-1"
         )}
         style={!isExpanded && panelOpen ? { height: `${mapPct}%` } : undefined}
@@ -675,6 +609,74 @@ const MapWidget: React.FC<WidgetComponentProps> = ({
           className="min-h-0 flex-1"
           mapKey={mapKey}
         />
+
+        {activeId !== null ? (
+          <div ref={searchRef} className="absolute inset-x-2 top-2 z-20">
+            <div className="flex items-center gap-2 rounded-md border border-ring bg-background/95 px-2 py-1 shadow-sm backdrop-blur">
+              <Crosshair className="h-3.5 w-3.5 shrink-0" />
+              <input
+                ref={searchInputRef}
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") {
+                    setQuery("");
+                    setSearchOpen(false);
+                  }
+                }}
+                placeholder={
+                  activeId === NEW_POINT ? "Search a place or address…" : "Update location…"
+                }
+                className="min-w-0 flex-1 bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground"
+              />
+              <button
+                type="button"
+                aria-label="Cancel"
+                onClick={() => setActiveId(null)}
+                className="text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
+            {searchOpen && search.data && search.data.length > 0 ? (
+              <ul
+                className={cn(
+                  "absolute left-0 top-full z-30 mt-1 max-h-56 w-full overflow-y-auto p-1",
+                  menuSurfaceClass
+                )}
+              >
+                {search.data.map((place) => (
+                  <li key={place.id} className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => selectResult(place)}
+                      className="min-w-0 flex-1 truncate rounded-sm px-2 py-1 text-left text-xs text-foreground/80 transition-colors hover:bg-accent"
+                    >
+                      {place.label}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => toggleFavourite(place)}
+                      aria-label="Toggle favourite"
+                      title="Toggle favourite"
+                      className="transition-colors hover:text-foreground"
+                    >
+                      <Star
+                        className={cn(
+                          "h-3.5 w-3.5",
+                          isFavourite(place)
+                            ? "fill-current text-amber-400"
+                            : "text-muted-foreground"
+                        )}
+                      />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       {!isExpanded && panelOpen ? (

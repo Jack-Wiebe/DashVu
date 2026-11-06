@@ -53,11 +53,15 @@ const MapCanvas = ({
   const mapRef = useRef<L.Map | null>(null);
   const markerLayerRef = useRef<L.LayerGroup | null>(null);
   const polylineLayerRef = useRef<L.LayerGroup | null>(null);
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const tilesLoadedRef = useRef(false);
   const markersRef = useRef(markers);
   const onMarkerDragRef = useRef(onMarkerDrag);
   const onPickRef = useRef(onPick);
   const onViewportChangeRef = useRef(onViewportChange);
   const [ready, setReady] = useState(false);
+  const [tilesLoaded, setTilesLoaded] = useState(false);
+  const [tilesError, setTilesError] = useState(false);
 
   markersRef.current = markers;
   onMarkerDragRef.current = onMarkerDrag;
@@ -79,6 +83,9 @@ const MapCanvas = ({
     if (!container) return;
 
     setReady(false);
+    setTilesLoaded(false);
+    setTilesError(false);
+    tilesLoadedRef.current = false;
     const anyContainer = container as any;
     if (anyContainer._leaflet_id) {
       try {
@@ -93,9 +100,18 @@ const MapCanvas = ({
       attributionControl: false,
     });
 
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    const tileLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
     }).addTo(map);
+    tileLayerRef.current = tileLayer;
+    tileLayer.on("loading", () => {
+      if (!tilesLoadedRef.current) setTilesError(false);
+    });
+    tileLayer.on("load", () => {
+      tilesLoadedRef.current = true;
+      setTilesLoaded(true);
+    });
+    tileLayer.on("tileerror", () => setTilesError(true));
 
     markerLayerRef.current = L.layerGroup().addTo(map);
     polylineLayerRef.current = L.layerGroup().addTo(map);
@@ -114,15 +130,22 @@ const MapCanvas = ({
     map.on("blur", disable);
     container.addEventListener("mouseleave", disable);
 
-    const ro = new ResizeObserver(() => {
-      map.invalidateSize();
-    });
+    let resizeFrame: number | null = null;
+    const invalidate = () => {
+      if (resizeFrame !== null) cancelAnimationFrame(resizeFrame);
+      resizeFrame = requestAnimationFrame(() => {
+        resizeFrame = null;
+        map.invalidateSize({ pan: false });
+      });
+    };
+    const ro = new ResizeObserver(invalidate);
     ro.observe(container);
 
     mapRef.current = map;
     setReady(true);
 
     return () => {
+      if (resizeFrame !== null) cancelAnimationFrame(resizeFrame);
       container.removeEventListener("mouseleave", disable);
       try {
         ro.disconnect();
@@ -136,6 +159,8 @@ const MapCanvas = ({
       mapRef.current = null;
       markerLayerRef.current = null;
       polylineLayerRef.current = null;
+      tileLayerRef.current = null;
+      tilesLoadedRef.current = false;
       if ((container as any)._leaflet_id) {
         try {
           delete (container as any)._leaflet_id;
@@ -202,23 +227,45 @@ const MapCanvas = ({
   }, [segments, ready]);
 
   useEffect(() => {
-    if (mapRef.current) {
-      mapRef.current.invalidateSize();
-    }
-  });
+    const map = mapRef.current;
+    if (!map || !ready) return;
+    const frame = requestAnimationFrame(() => map.invalidateSize({ pan: false }));
+    return () => cancelAnimationFrame(frame);
+  }, [ready]);
+
+  const retryTiles = () => {
+    const tileLayer = tileLayerRef.current;
+    if (!tileLayer) return;
+    tilesLoadedRef.current = false;
+    setTilesLoaded(false);
+    setTilesError(false);
+    tileLayer.redraw();
+  };
 
   return (
     <div
-      ref={containerRef}
       className={cn(
         "relative isolate min-h-0 h-full w-full overflow-hidden rounded-md border border-border",
         pickActive && "cursor-crosshair",
         className
       )}
     >
-      {!ready && (
-        <div className="absolute inset-0 flex items-center justify-center text-xs text-muted-foreground">
+      <div ref={containerRef} className="h-full w-full" />
+      {(!ready || !tilesLoaded) && !tilesError && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs text-muted-foreground">
           Loading map…
+        </div>
+      )}
+      {tilesError && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-background/80 p-2 text-center text-xs text-muted-foreground">
+          <span>Map tiles unavailable.</span>
+          <button
+            type="button"
+            onClick={retryTiles}
+            className="rounded border border-border px-2 py-1 text-foreground transition-colors hover:bg-accent"
+          >
+            Retry
+          </button>
         </div>
       )}
       <span className="pointer-events-none absolute bottom-0 right-0 z-[500] rounded-tl bg-background/70 px-1.5 py-0.5 text-[10px] text-muted-foreground">

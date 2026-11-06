@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as Progress from "@radix-ui/react-progress";
 import {
   Check,
@@ -40,6 +40,15 @@ const repeatNext: Record<RepeatState, RepeatState> = {
   track: "off",
 };
 
+function getInterpolatedProgressMs(
+  data: { progress_ms?: number | null; is_playing?: boolean } | null | undefined,
+  anchorMs: number,
+  nowMs: number
+): number {
+  if (!data || data.progress_ms == null) return 0;
+  return data.progress_ms + (data.is_playing ? Math.max(0, nowMs - anchorMs) : 0);
+}
+
 function useNow(active: boolean, intervalMs = 250) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -71,11 +80,20 @@ const SpotifyWidget: React.FC<WidgetComponentProps> = ({ className }) => {
     retry: false,
   });
 
+  const dataIsPlaying = playback.data?.is_playing ?? false;
+  const now = useNow(dataIsPlaying);
+  const progressMs = getInterpolatedProgressMs(playback.data, playback.dataUpdatedAt, now);
+  const progressMsRef = useRef(progressMs);
+  progressMsRef.current = progressMs;
+
   const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
   const refresh = () => void playback.refetch();
   const cancelPlayback = () => void utils.spotify.getPlaybackState.cancel();
   const patchPlayback = (patch: Partial<NonNullable<typeof playback.data>>) => {
-    utils.spotify.getPlaybackState.setData(undefined, (old) => (old ? { ...old, ...patch } : old));
+    const progress_ms = Math.round(progressMsRef.current);
+    utils.spotify.getPlaybackState.setData(undefined, (old) =>
+      old ? { ...old, ...patch, progress_ms } : old
+    );
   };
   const retryUntil = async (isDone: (data: NonNullable<typeof playback.data>) => boolean) => {
     setPlaybackStarting(true);
@@ -124,14 +142,14 @@ const SpotifyWidget: React.FC<WidgetComponentProps> = ({ className }) => {
   const play = trpc.spotify.play.useMutation({
     onMutate: () => {
       cancelPlayback();
-      patchPlayback({ is_playing: true, timestamp: Date.now() });
+      patchPlayback({ is_playing: true });
     },
     onSettled: makeHandleResult(false, true, true),
   });
   const pause = trpc.spotify.pause.useMutation({
     onMutate: () => {
       cancelPlayback();
-      patchPlayback({ is_playing: false, timestamp: Date.now() });
+      patchPlayback({ is_playing: false });
     },
     onSettled: makeHandleResult(false),
   });
@@ -184,9 +202,6 @@ const SpotifyWidget: React.FC<WidgetComponentProps> = ({ className }) => {
     onSettled: makeHandleResult(false),
   });
 
-  const dataIsPlaying = playback.data?.is_playing ?? false;
-  const now = useNow(dataIsPlaying);
-
   if (status === "loading") {
     return <div className={cn(className, "text-sm")}>Loading…</div>;
   }
@@ -204,11 +219,6 @@ const SpotifyWidget: React.FC<WidgetComponentProps> = ({ className }) => {
 
   const track = playback.data?.item ?? null;
   const isPlaying = playback.data?.is_playing ?? false;
-  const progressAnchorMs = playback.data?.timestamp ?? playback.dataUpdatedAt;
-  const progressMs =
-    playback.data && playback.data.progress_ms != null
-      ? playback.data.progress_ms + (isPlaying ? Math.max(0, now - progressAnchorMs) : 0)
-      : 0;
   const progress =
     track && track.duration_ms > 0
       ? Math.min(100, (Math.min(progressMs, track.duration_ms) / track.duration_ms) * 100)

@@ -263,7 +263,8 @@ app runnable after each change.
 
 **Spotify**
 
-- Playback bar uses local progress interpolation between polls and corrects on each poll.
+- Playback bar uses local progress interpolation between polls and corrects on each poll; anchor to
+  the local receipt time (`dataUpdatedAt`), not Spotify's server `timestamp`.
 - Add a device selector in the widget header.
 - `NO_ACTIVE_DEVICE` shows available devices plus a hint to open Spotify on a device.
 - Selecting a device transfers playback.
@@ -309,20 +310,7 @@ app runnable after each change.
 
 ### Phase 1 — Bugs and quick wins
 
-#### 1. Spotify progress interpolation
-
-Files: `apps/web/src/components/widgets/SpotifyWidget.tsx`,
-`packages/api/src/routers/spotify.ts`.
-
-- Track `progress_ms`, `is_playing`, and the response timestamp.
-- Advance the displayed progress locally between polls.
-- Reset interpolation on track change, pause, seek, skip, or new poll.
-- Do not show progress past track duration.
-
-Acceptance: progress moves smoothly during playback; pause/seek/skip resync correctly; the bar never
-exceeds the track length.
-
-#### 2. Spotify device selector
+#### 1. Spotify device selector
 
 - Add a device control to the widget header.
 - Fetch devices when the menu opens and refresh with playback state.
@@ -334,7 +322,7 @@ Acceptance: users can see and choose available devices; selecting a device trans
 device login no longer leaves the widget with no options; `NO_ACTIVE_DEVICE` is actionable, not just a
 toast.
 
-#### 3. Topbar drag via dots
+#### 2. Topbar drag via dots
 
 Files: `apps/web/src/components/NavBar.tsx`.
 
@@ -346,7 +334,7 @@ Files: `apps/web/src/components/NavBar.tsx`.
 Acceptance: dragging the dots reorders tabs; clicking the dots still opens the menu; tab name drag
 still works; order persists after reload.
 
-#### 4. Smoke-test resolved items
+#### 3. Smoke-test resolved items
 
 - Settings: outside click and Esc close app/widget drawers.
 - Instancing: create/select/update instance persists without reload.

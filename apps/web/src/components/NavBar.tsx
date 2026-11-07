@@ -65,10 +65,21 @@ const DashboardTab = ({
     disabled: !editMode,
   });
   const inputRef = useRef<HTMLInputElement>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
+  const menuWasOpenRef = useRef(false);
 
   useEffect(() => {
     if (renaming) inputRef.current?.select();
   }, [renaming]);
+
+  useEffect(() => {
+    if (isDragging) setMenuOpen(false);
+  }, [isDragging]);
+
+  useEffect(() => {
+    if (!editMode) setMenuOpen(false);
+  }, [editMode]);
 
   if (renaming) {
     return (
@@ -117,21 +128,76 @@ const DashboardTab = ({
       </button>
 
       {editMode ? (
-        <DropdownMenu modal={false}>
+        <DropdownMenu
+          modal={false}
+          open={menuOpen}
+          onOpenChange={(open) => {
+            if (!open) {
+              setMenuOpen(false);
+              return;
+            }
+            if (!pointerStartRef.current) setMenuOpen(true);
+          }}
+        >
           <DropdownMenuTrigger asChild>
             <button
               type="button"
               aria-label={`Options for ${dashboard.name}`}
-              className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              className={cn(
+                "rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
+                editMode && "touch-none cursor-grab active:cursor-grabbing"
+              )}
+              {...attributes}
+              onPointerDown={(event) => listeners?.onPointerDown?.(event)}
+              onPointerDownCapture={(event) => {
+                if (event.button !== 0) {
+                  pointerStartRef.current = null;
+                  return;
+                }
+                pointerStartRef.current = { x: event.clientX, y: event.clientY };
+                menuWasOpenRef.current = menuOpen;
+              }}
+              onPointerUp={(event) => {
+                if (event.button !== 0) return;
+                const start = pointerStartRef.current;
+                pointerStartRef.current = null;
+                if (!start || Math.hypot(event.clientX - start.x, event.clientY - start.y) > 8) {
+                  return;
+                }
+                if (menuWasOpenRef.current) {
+                  setMenuOpen(false);
+                  return;
+                }
+                setMenuOpen(true);
+              }}
+              onPointerCancel={() => {
+                pointerStartRef.current = null;
+              }}
+              onPointerLeave={() => {
+                pointerStartRef.current = null;
+              }}
+              onClick={(event) => {
+                if (event.detail === 0) setMenuOpen((open) => !open);
+              }}
             >
               <MoreVertical className="h-3.5 w-3.5" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className={menuSurfaceClass}>
-            <DropdownMenuItem onSelect={onRenameStart}>Rename</DropdownMenuItem>
+            <DropdownMenuItem
+              onSelect={() => {
+                setMenuOpen(false);
+                onRenameStart();
+              }}
+            >
+              Rename
+            </DropdownMenuItem>
             <DropdownMenuItem
               disabled={!canDelete}
-              onSelect={onDelete}
+              onSelect={() => {
+                setMenuOpen(false);
+                onDelete();
+              }}
               className="text-red-400 focus:text-red-300"
             >
               Delete

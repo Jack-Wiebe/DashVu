@@ -113,7 +113,8 @@ defaultSize }`); `Widget.tsx` resolves the component/icon from there. The `kind`
   `setActive` upserts `userPreferences.activeDashboardId` (FK → `dashboard.id`, `ON DELETE SET NULL`).
   The active tab is persisted in the DB; the first-ever (auto-created) dashboard seeds
   `DEFAULT_WIDGET_LAYOUT`, later ones start empty. Tab management (add/rename/delete/drag-reorder) is
-  gated to edit mode; clicking a tab always switches.
+  gated to edit mode; clicking a tab always switches. Both the tab name and the three-dot trigger drag;
+  moving the pointer beyond the 8px activation distance suppresses the Rename/Delete menu.
 - Dashboard layout is persisted per user: the client edits it and auto-saves with `dashboard.saveLayout`.
   `saveLayout` upserts by client-generated widget id scoped to the owner's dashboard and stores the
   **placement** only: `kind`, `size`, `position`, `groupId`. `widgetGroups` (see below) owns all state.
@@ -313,19 +314,7 @@ app runnable after each change.
 
 ### Phase 1 — Bugs and quick wins
 
-#### 1. Topbar drag via dots
-
-Files: `apps/web/src/components/NavBar.tsx`.
-
-- Attach dnd-kit listeners/attributes to the three-dot trigger as well as the tab name.
-- Keep normal click opening the Rename/Delete menu.
-- Use the existing activation distance so click vs drag is distinguishable.
-- Keep reordering gated to edit mode.
-
-Acceptance: dragging the dots reorders tabs; clicking the dots still opens the menu; tab name drag
-still works; order persists after reload.
-
-#### 2. Smoke-test resolved items
+#### 1. Smoke-test resolved items
 
 - Settings: outside click and Esc close app/widget drawers.
 - Instancing: create/select/update instance persists without reload.

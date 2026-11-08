@@ -2,6 +2,7 @@ import type { AdapterAccountType } from "@auth/core/adapters";
 import { sql } from "drizzle-orm";
 import {
   boolean,
+  doublePrecision,
   index,
   integer,
   jsonb,
@@ -168,4 +169,22 @@ export const widgetItems = pgTable(
     updatedAt: timestamp("updatedAt", { mode: "date" }).notNull().defaultNow(),
   },
   (item) => [index("widgetItem_groupId_mode_idx").on(item.groupId, item.mode)]
+);
+
+/** Reusable places saved by a user, shared across all of their map instances. */
+export const savedLocations = pgTable(
+  "savedLocation",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    label: text("label").notNull(),
+    lat: doublePrecision("lat").notNull(),
+    lon: doublePrecision("lon").notNull(),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (location) => [index("savedLocation_userId_idx").on(location.userId)]
 );

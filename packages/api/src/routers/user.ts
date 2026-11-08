@@ -20,7 +20,18 @@ export const userRouter = router({
       const userId = ctx.session.user.id;
       const patch: { theme?: string; settings?: Record<string, unknown> | null } = {};
       if (input.theme !== undefined) patch.theme = input.theme;
-      if (input.settings !== undefined) patch.settings = input.settings ?? null;
+      if (input.settings !== undefined) {
+        if (input.settings === null) {
+          patch.settings = null;
+        } else {
+          const [current] = await db
+            .select({ settings: userPreferences.settings })
+            .from(userPreferences)
+            .where(eq(userPreferences.userId, userId))
+            .limit(1);
+          patch.settings = { ...(current?.settings ?? {}), ...input.settings };
+        }
+      }
 
       if (Object.keys(patch).length > 0) {
         await db

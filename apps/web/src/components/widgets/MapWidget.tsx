@@ -30,6 +30,7 @@ import {
 import {
   Bike,
   Car,
+  Check,
   ChevronDown,
   ChevronUp,
   Crosshair,
@@ -38,6 +39,8 @@ import {
   LocateFixed,
   MapPin,
   Maximize2,
+  MoreVertical,
+  Pin,
   Plus,
   Sparkles,
   Star,
@@ -53,6 +56,12 @@ import { cn, menuSurfaceClass } from "@/lib/utils";
 import type { WidgetComponentProps } from "@/types/widget";
 
 import { Button } from "../ui/Button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import type { MapMarker, MapSegment } from "./MapCanvas";
 
@@ -67,7 +76,15 @@ const MapCanvas = dynamic(() => import("./MapCanvas"), {
 
 type MapLocation = GeoPlaceInput;
 
-const NEW_POINT = "__new__";
+interface SavedLocation {
+  id: string;
+  label: string;
+  lat: number;
+  lon: number;
+}
+
+let geolocationPromptStarted = false;
+
 const MAX_POINTS = MAX_MAP_STOPS + 1;
 const MIN_MAP_PCT = 20;
 const MAX_MAP_PCT = 70;
@@ -86,6 +103,7 @@ const MODES: { value: TravelMode; label: string; Icon: LucideIcon }[] = [
 interface MapState {
   mode: TravelMode;
   points: MapLocation[];
+  pinnedIds: string[];
   favourites: MapLocation[];
 }
 
@@ -109,6 +127,7 @@ function readSettings(settings: Record<string, unknown> | null | undefined): Map
   return {
     mode: data.mode ?? "driving",
     points,
+    pinnedIds: data.pinnedIds ?? [],
     favourites: data.favourites ?? [],
   };
 }
@@ -146,16 +165,35 @@ function transitColor(mode: string): string {
 interface SortablePointProps {
   point: MapLocation;
   index: number;
-  active: boolean;
+  isDestination: boolean;
+  editing: boolean;
+  pinned: boolean;
+  canPin: boolean;
+  saved: boolean;
   onEdit: () => void;
   onRemove: () => void;
+  onTogglePin: () => void;
+  onToggleSaved: () => void;
 }
 
-const SortablePoint = ({ point, index, active, onEdit, onRemove }: SortablePointProps) => {
+const SortablePoint = ({
+  point,
+  index,
+  isDestination,
+  editing,
+  pinned,
+  canPin,
+  saved,
+  onEdit,
+  onRemove,
+  onTogglePin,
+  onToggleSaved,
+}: SortablePointProps) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: point.id,
   });
   const isOrigin = index === 0;
+  const badge = isOrigin ? "S" : isDestination ? "E" : index;
 
   return (
     <li
@@ -168,7 +206,7 @@ const SortablePoint = ({ point, index, active, onEdit, onRemove }: SortablePoint
       }}
       className={cn(
         "flex items-center gap-2 rounded-md border px-2 py-1",
-        active ? "border-ring bg-accent/60" : "border-border bg-muted/40"
+        editing ? "border-ring bg-accent/60" : "border-border bg-muted/40"
       )}
     >
       <button
@@ -183,12 +221,42 @@ const SortablePoint = ({ point, index, active, onEdit, onRemove }: SortablePoint
       <span
         className={cn(
           "flex h-4 w-4 shrink-0 items-center justify-center rounded text-[10px] font-medium tabular-nums",
-          isOrigin ? "bg-green-500/25 text-green-600 dark:text-green-400" : "bg-primary/20"
+          isOrigin
+            ? "bg-green-500/25 text-green-600 dark:text-green-400"
+            : isDestination
+              ? "bg-rose-500/25 text-rose-600 dark:text-rose-400"
+              : "bg-primary/20"
         )}
       >
-        {isOrigin ? "S" : index}
+        {badge}
       </span>
       <span className="min-w-0 flex-1 truncate text-xs">{point.label}</span>
+      {canPin ? (
+        <button
+          type="button"
+          aria-label={pinned ? "Unpin stop" : "Pin stop in place"}
+          title={pinned ? "Unpin stop" : "Pin stop in place"}
+          onClick={onTogglePin}
+          className={cn(
+            "transition-colors hover:text-foreground",
+            pinned ? "text-primary" : "text-muted-foreground"
+          )}
+        >
+          <Pin className={cn("h-3.5 w-3.5", pinned && "fill-current")} />
+        </button>
+      ) : null}
+      <button
+        type="button"
+        aria-label={saved ? "Remove from saved locations" : "Save location"}
+        title={saved ? "Remove from saved locations" : "Save location"}
+        onClick={onToggleSaved}
+        className={cn(
+          "transition-colors hover:text-foreground",
+          saved ? "text-amber-400" : "text-muted-foreground"
+        )}
+      >
+        <Star className={cn("h-3.5 w-3.5", saved && "fill-current")} />
+      </button>
       <button
         type="button"
         aria-label="Set location on map"
@@ -196,7 +264,7 @@ const SortablePoint = ({ point, index, active, onEdit, onRemove }: SortablePoint
         onClick={onEdit}
         className={cn(
           "transition-colors hover:text-foreground",
-          active ? "text-foreground" : "text-muted-foreground"
+          editing ? "text-foreground" : "text-muted-foreground"
         )}
       >
         <Crosshair className="h-3.5 w-3.5" />
@@ -223,7 +291,10 @@ const MapWidget: React.FC<WidgetComponentProps> = ({
   const utils = trpc.useUtils();
 
   const [state, setState] = useState<MapState>(() => readSettings(settings));
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [pickMode, setPickMode] = useState(false);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
   const [mapKey, setMapKey] = useState<string>(() => `${widgetId}`);
   const [query, setQuery] = useState("");
   const [searchParams, setSearchParams] = useState<{
@@ -250,8 +321,12 @@ const MapWidget: React.FC<WidgetComponentProps> = ({
   const viewportRef = useRef<GeoPoint | null>(null);
   const stateRef = useRef(state);
   stateRef.current = state;
-  const activeIdRef = useRef<string | null>(null);
-  activeIdRef.current = activeId;
+  const editingIdRef = useRef<string | null>(null);
+  editingIdRef.current = editingId;
+  const pickModeRef = useRef(false);
+  pickModeRef.current = pickMode;
+  const autoLocationRef = useRef(false);
+  const favouritesMigrationRef = useRef(false);
 
   const signature = useMemo(() => JSON.stringify(settings ?? {}), [settings]);
   useEffect(() => {
@@ -279,8 +354,8 @@ const MapWidget: React.FC<WidgetComponentProps> = ({
   }, [mapPct, widgetId]);
 
   useEffect(() => {
-    if (activeId !== null) searchInputRef.current?.focus();
-  }, [activeId]);
+    if (editingId !== null) searchInputRef.current?.focus();
+  }, [editingId]);
 
   useEffect(() => {
     const trimmed = query.trim();
@@ -311,6 +386,31 @@ const MapWidget: React.FC<WidgetComponentProps> = ({
     },
     [onSettingsChange]
   );
+
+  const savedQuery = trpc.map.listSavedLocations.useQuery(undefined, { enabled: mounted });
+  const userStateQuery = trpc.map.getUserState.useQuery(undefined, {
+    enabled: mounted,
+    staleTime: 60_000,
+  });
+  const updateUserState = trpc.map.updateUserState.useMutation();
+  const createSaved = trpc.map.createSavedLocation.useMutation({
+    onSuccess: () => utils.map.listSavedLocations.invalidate(),
+  });
+  const renameSaved = trpc.map.renameSavedLocation.useMutation({
+    onSuccess: () => utils.map.listSavedLocations.invalidate(),
+  });
+  const removeSaved = trpc.map.removeSavedLocation.useMutation({
+    onSuccess: () => utils.map.listSavedLocations.invalidate(),
+  });
+  const importFavourites = trpc.map.importSavedLocations.useMutation({
+    onSuccess: () => {
+      utils.map.listSavedLocations.invalidate();
+      commit({ favourites: [] });
+    },
+    onError: () => {
+      favouritesMigrationRef.current = false;
+    },
+  });
 
   const search = trpc.map.geocode.useQuery(
     { query: searchParams?.query ?? "", lat: searchParams?.lat, lon: searchParams?.lon },
@@ -343,11 +443,11 @@ const MapWidget: React.FC<WidgetComponentProps> = ({
 
   const markers = useMemo<MapMarker[]>(
     () =>
-      state.points.map((point, index) =>
-        index === 0
-          ? { id: point.id, role: "origin" as const, lat: point.lat, lon: point.lon }
-          : { id: point.id, role: "stop" as const, index, lat: point.lat, lon: point.lon }
-      ),
+      state.points.map((point, index) => {
+        const role =
+          index === 0 ? "origin" : index === state.points.length - 1 ? "destination" : "stop";
+        return { id: point.id, role, index, lat: point.lat, lon: point.lon };
+      }),
     [state.points]
   );
 
@@ -397,12 +497,12 @@ const MapWidget: React.FC<WidgetComponentProps> = ({
   );
 
   const applyLocation = useCallback(
-    (place: GeoPlace) => {
-      const current = activeIdRef.current;
+    (place: GeoPlace, options?: { append?: boolean }) => {
+      const current = options?.append ? null : editingIdRef.current;
       const next = toLocation(place);
       const points = stateRef.current.points;
       let updated: MapLocation[];
-      if (current && current !== NEW_POINT && points.some((p) => p.id === current)) {
+      if (current && points.some((p) => p.id === current)) {
         updated = points.map((p) => (p.id === current ? { ...next, id: p.id } : p));
       } else if (points.length >= MAX_POINTS) {
         updated = points;
@@ -410,16 +510,30 @@ const MapWidget: React.FC<WidgetComponentProps> = ({
         updated = [...points, next];
       }
       commit({ points: updated });
-      setActiveId(null);
+      setEditingId(null);
+      setPickMode(false);
     },
     [commit]
   );
 
+  const persistLastKnown = useCallback(
+    (place: GeoPlace) => {
+      updateUserState.mutate({
+        lastKnownLocation: {
+          id: place.id,
+          label: place.label,
+          lat: place.lat,
+          lon: place.lon,
+          kind: place.kind ?? null,
+        },
+      });
+    },
+    [updateUserState]
+  );
+
   const locateAt = useCallback(
-    async (point: GeoPoint, label?: string) => {
-      const place = label
-        ? { id: `${point.lat},${point.lon}`, label, lat: point.lat, lon: point.lon, kind: null }
-        : await reversePlace(point);
+    async (point: GeoPoint) => {
+      const place = await reversePlace(point);
       applyLocation(place);
     },
     [applyLocation, reversePlace]
@@ -427,10 +541,13 @@ const MapWidget: React.FC<WidgetComponentProps> = ({
 
   const onPick = useCallback(
     (point: GeoPoint) => {
-      if (activeId === null) return;
+      if (editingIdRef.current === null && !pickModeRef.current) return;
+      setPickMode(false);
+      setQuery("");
+      setSearchOpen(false);
       void locateAt(point);
     },
-    [activeId, locateAt]
+    [locateAt]
   );
 
   const onMarkerDrag = useCallback(
@@ -475,11 +592,13 @@ const MapWidget: React.FC<WidgetComponentProps> = ({
   const useMyLocation = () => {
     if (typeof navigator === "undefined" || !navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        void locateAt(
-          { lat: position.coords.latitude, lon: position.coords.longitude },
-          "Current location"
-        );
+      async (position) => {
+        const place = await reversePlace({
+          lat: position.coords.latitude,
+          lon: position.coords.longitude,
+        });
+        persistLastKnown(place);
+        applyLocation(place, { append: true });
       },
       () => undefined
     );
@@ -491,25 +610,98 @@ const MapWidget: React.FC<WidgetComponentProps> = ({
     setSearchOpen(false);
   };
 
-  const toggleFavourite = (place: GeoPlace) => {
-    const existing = state.favourites.find(
-      (favourite) =>
-        favourite.label === place.label &&
-        Math.abs(favourite.lat - place.lat) < 1e-6 &&
-        Math.abs(favourite.lon - place.lon) < 1e-6
+  const savedFor = (point: { lat: number; lon: number }) =>
+    savedQuery.data?.find(
+      (location) =>
+        Math.abs(location.lat - point.lat) < 1e-6 && Math.abs(location.lon - point.lon) < 1e-6
     );
+
+  const toggleSaved = (place: { label: string; lat: number; lon: number }) => {
+    const existing = savedFor(place);
     if (existing) {
-      commit({ favourites: state.favourites.filter((item) => item.id !== existing.id) });
+      removeSaved.mutate({ id: existing.id });
     } else {
-      commit({ favourites: [...state.favourites, toLocation(place)] });
+      createSaved.mutate({ label: place.label, lat: place.lat, lon: place.lon });
     }
   };
 
-  const isFavourite = (place: GeoPlace) =>
-    state.favourites.some(
-      (favourite) =>
-        Math.abs(favourite.lat - place.lat) < 1e-6 && Math.abs(favourite.lon - place.lon) < 1e-6
-    );
+  const startRename = (location: SavedLocation) => {
+    setRenamingId(location.id);
+    setRenameValue(location.label);
+  };
+
+  const submitRename = () => {
+    if (!renamingId) return;
+    const label = renameValue.trim();
+    if (!label) return;
+    renameSaved.mutate({ id: renamingId, label });
+    setRenamingId(null);
+    setRenameValue("");
+  };
+
+  useEffect(() => {
+    if (!mounted || state.favourites.length === 0 || favouritesMigrationRef.current) return;
+    favouritesMigrationRef.current = true;
+    importFavourites.mutate({
+      locations: state.favourites.map(({ label, lat, lon }) => ({ label, lat, lon })),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted, state.favourites]);
+
+  useEffect(() => {
+    if (!mounted || autoLocationRef.current || state.points.length > 0) return;
+    if (userStateQuery.isLoading) return;
+
+    autoLocationRef.current = true;
+    const lastKnown = userStateQuery.data?.lastKnownLocation;
+    const promptedAt = userStateQuery.data?.geolocationPromptedAt;
+    const fallback = () => {
+      if (lastKnown && stateRef.current.points.length === 0) {
+        applyLocation(lastKnown, { append: true });
+      }
+    };
+
+    void (async () => {
+      if (typeof navigator === "undefined" || !navigator.geolocation) {
+        fallback();
+        return;
+      }
+
+      let permission: PermissionState | "unknown" = "unknown";
+      try {
+        permission = (await navigator.permissions.query({ name: "geolocation" })).state;
+      } catch {
+        /* permissions API unavailable */
+      }
+
+      if (permission === "denied") {
+        fallback();
+        return;
+      }
+      if (permission !== "granted" && (promptedAt || geolocationPromptStarted)) {
+        fallback();
+        return;
+      }
+      if (permission !== "granted") {
+        geolocationPromptStarted = true;
+        updateUserState.mutate({ geolocationPromptedAt: new Date().toISOString() });
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const place = await reversePlace({
+            lat: position.coords.latitude,
+            lon: position.coords.longitude,
+          });
+          persistLastKnown(place);
+          if (stateRef.current.points.length === 0) applyLocation(place, { append: true });
+        },
+        fallback,
+        { timeout: 10000, maximumAge: 300_000 }
+      );
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted, state.points.length, userStateQuery.isLoading, userStateQuery.data]);
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -523,12 +715,14 @@ const MapWidget: React.FC<WidgetComponentProps> = ({
   const optimize = async () => {
     if (state.points.length < 2) return;
     const [origin, ...stops] = state.points;
+    const pinned = new Set(state.pinnedIds);
     setOptimizing(true);
     try {
       const result = await utils.map.optimize.fetch({
         mode: state.mode,
         origin: { lat: origin.lat, lon: origin.lon },
         stops: stops.map((stop) => ({ lat: stop.lat, lon: stop.lon })),
+        pinnedIndices: stops.flatMap((stop, index) => (pinned.has(stop.id) ? [index] : [])),
       });
       const reordered = result.order
         .map((index) => stops[index])
@@ -540,8 +734,9 @@ const MapWidget: React.FC<WidgetComponentProps> = ({
   };
 
   const clearPoints = () => {
-    setActiveId(null);
-    commit({ points: [] });
+    setEditingId(null);
+    setPickMode(false);
+    commit({ points: [], pinnedIds: [] });
   };
 
   const togglePanel = () => {
@@ -570,6 +765,29 @@ const MapWidget: React.FC<WidgetComponentProps> = ({
     }
     return `${formatDistance(data.distanceMeters)} · ${formatDuration(data.durationSeconds)}`;
   })();
+
+  const pinnedSet = useMemo(() => new Set(state.pinnedIds), [state.pinnedIds]);
+  const pinnedMiddleCount = state.points
+    .slice(1, -1)
+    .filter((point) => pinnedSet.has(point.id)).length;
+  const movableCount = Math.max(0, state.points.length - 2 - pinnedMiddleCount);
+  const togglePin = (id: string) => {
+    const next = new Set(pinnedSet);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    commit({ pinnedIds: [...next] });
+  };
+  const removePoint = (point: MapLocation) => {
+    setEditingId((value) => (value === point.id ? null : value));
+    commit({
+      points: state.points.filter((item) => item.id !== point.id),
+      pinnedIds: state.pinnedIds.filter((id) => id !== point.id),
+    });
+  };
+  const cancelTarget = () => {
+    setEditingId(null);
+    setPickMode(false);
+  };
 
   const renderEditor = (isExpanded: boolean) => (
     <>
@@ -605,48 +823,77 @@ const MapWidget: React.FC<WidgetComponentProps> = ({
           onPick={onPick}
           onMarkerDrag={onMarkerDrag}
           onViewportChange={onViewportChange}
-          pickActive={activeId !== null}
+          pickActive={pickMode || editingId !== null}
           className="min-h-0 flex-1"
           mapKey={mapKey}
         />
 
-        {activeId !== null ? (
-          <div ref={searchRef} className="absolute inset-x-2 top-2 z-20">
-            <div className="flex items-center gap-2 rounded-md border border-ring bg-background/95 px-2 py-1 shadow-sm backdrop-blur">
-              <Crosshair className="h-3.5 w-3.5 shrink-0" />
-              <input
-                ref={searchInputRef}
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Escape") {
-                    setQuery("");
+        <div ref={searchRef} className="absolute inset-x-2 top-2 z-20">
+          <div
+            className={cn(
+              "flex items-center gap-2 rounded-md border bg-background/95 px-2 py-1 shadow-sm backdrop-blur",
+              pickMode || editingId ? "border-ring" : "border-border"
+            )}
+          >
+            <Crosshair className="h-3.5 w-3.5 shrink-0" />
+            <input
+              ref={searchInputRef}
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") {
+                  if (searchOpen) {
                     setSearchOpen(false);
+                  } else {
+                    cancelTarget();
+                    setQuery("");
                   }
-                }}
-                placeholder={
-                  activeId === NEW_POINT ? "Search a place or address…" : "Update location…"
                 }
-                className="min-w-0 flex-1 bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground"
-              />
+              }}
+              placeholder={
+                editingId
+                  ? "Update location…"
+                  : pickMode
+                    ? "Click map or search…"
+                    : "Search a place or address…"
+              }
+              className="min-w-0 flex-1 bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground"
+            />
+            <button
+              type="button"
+              aria-label="Use my location"
+              title="Use my location"
+              onClick={useMyLocation}
+              className="text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <LocateFixed className="h-3.5 w-3.5" />
+            </button>
+            {query || pickMode || editingId ? (
               <button
                 type="button"
                 aria-label="Cancel"
-                onClick={() => setActiveId(null)}
+                onClick={() => {
+                  cancelTarget();
+                  setQuery("");
+                  setSearchOpen(false);
+                }}
                 className="text-muted-foreground transition-colors hover:text-foreground"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
-            </div>
+            ) : null}
+          </div>
 
-            {searchOpen && search.data && search.data.length > 0 ? (
-              <ul
-                className={cn(
-                  "absolute left-0 top-full z-30 mt-1 max-h-56 w-full overflow-y-auto p-1",
-                  menuSurfaceClass
-                )}
-              >
-                {search.data.map((place) => (
+          {searchOpen && search.data && search.data.length > 0 ? (
+            <ul
+              className={cn(
+                "absolute left-0 top-full z-30 mt-1 max-h-56 w-full overflow-y-auto p-1",
+                menuSurfaceClass
+              )}
+            >
+              {search.data.map((place) => {
+                const saved = Boolean(savedFor(place));
+                return (
                   <li key={place.id} className="flex items-center gap-1">
                     <button
                       type="button"
@@ -657,26 +904,24 @@ const MapWidget: React.FC<WidgetComponentProps> = ({
                     </button>
                     <button
                       type="button"
-                      onClick={() => toggleFavourite(place)}
-                      aria-label="Toggle favourite"
-                      title="Toggle favourite"
+                      onClick={() => toggleSaved(place)}
+                      aria-label={saved ? "Remove from saved locations" : "Save location"}
+                      title={saved ? "Remove from saved locations" : "Save location"}
                       className="transition-colors hover:text-foreground"
                     >
                       <Star
                         className={cn(
                           "h-3.5 w-3.5",
-                          isFavourite(place)
-                            ? "fill-current text-amber-400"
-                            : "text-muted-foreground"
+                          saved ? "fill-current text-amber-400" : "text-muted-foreground"
                         )}
                       />
                     </button>
                   </li>
-                ))}
-              </ul>
-            ) : null}
-          </div>
-        ) : null}
+                );
+              })}
+            </ul>
+          ) : null}
+        </div>
       </div>
 
       {!isExpanded && panelOpen ? (
@@ -699,31 +944,29 @@ const MapWidget: React.FC<WidgetComponentProps> = ({
         <div className="flex shrink-0 items-center gap-1">
           <Button
             size="xs"
-            variant={activeId === NEW_POINT ? "default" : "ghost"}
-            onClick={() => setActiveId((value) => (value === NEW_POINT ? null : NEW_POINT))}
-            disabled={state.points.length >= MAX_POINTS && activeId !== NEW_POINT}
+            variant={pickMode ? "default" : "ghost"}
+            onClick={() => {
+              setEditingId(null);
+              setPickMode((value) => !value);
+            }}
+            disabled={state.points.length >= MAX_POINTS && !pickMode}
             aria-label="Add stop"
             title="Add stop"
           >
             <Plus className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            size="xs"
-            variant="ghost"
-            onClick={useMyLocation}
-            aria-label="Use my location"
-            title="Use my location"
-          >
-            <LocateFixed className="h-3.5 w-3.5" />
           </Button>
           {state.mode !== "transit" && state.points.length > 2 ? (
             <Button
               size="xs"
               variant="ghost"
               onClick={optimize}
-              disabled={optimizing}
+              disabled={optimizing || movableCount < 2}
               aria-label="Optimize stop order"
-              title="Optimize stop order"
+              title={
+                movableCount < 2
+                  ? "Pin fewer stops to optimize"
+                  : "Optimize unpinned stops between fixed endpoints"
+              }
             >
               <Sparkles className="h-3.5 w-3.5" />
               <span className={cn("ml-1", isExpanded ? "inline" : "hidden sm:inline")}>
@@ -796,14 +1039,18 @@ const MapWidget: React.FC<WidgetComponentProps> = ({
                         key={point.id}
                         point={point}
                         index={index}
-                        active={activeId === point.id}
-                        onEdit={() =>
-                          setActiveId((value) => (value === point.id ? null : point.id))
-                        }
-                        onRemove={() => {
-                          setActiveId((value) => (value === point.id ? null : value));
-                          commit({ points: state.points.filter((item) => item.id !== point.id) });
+                        isDestination={index === state.points.length - 1}
+                        editing={editingId === point.id}
+                        pinned={pinnedSet.has(point.id)}
+                        canPin={index > 0 && index < state.points.length - 1}
+                        saved={Boolean(savedFor(point))}
+                        onEdit={() => {
+                          setPickMode(false);
+                          setEditingId((value) => (value === point.id ? null : point.id));
                         }}
+                        onRemove={() => removePoint(point)}
+                        onTogglePin={() => togglePin(point.id)}
+                        onToggleSaved={() => toggleSaved(point)}
                       />
                     ))}
                   </ul>
@@ -816,30 +1063,111 @@ const MapWidget: React.FC<WidgetComponentProps> = ({
                     key={point.id}
                     point={point}
                     index={index}
-                    active={activeId === point.id}
-                    onEdit={() => setActiveId((value) => (value === point.id ? null : point.id))}
-                    onRemove={() => {
-                      setActiveId((value) => (value === point.id ? null : value));
-                      commit({ points: state.points.filter((item) => item.id !== point.id) });
+                    isDestination={index === state.points.length - 1}
+                    editing={editingId === point.id}
+                    pinned={pinnedSet.has(point.id)}
+                    canPin={index > 0 && index < state.points.length - 1}
+                    saved={Boolean(savedFor(point))}
+                    onEdit={() => {
+                      setPickMode(false);
+                      setEditingId((value) => (value === point.id ? null : point.id));
                     }}
+                    onRemove={() => removePoint(point)}
+                    onTogglePin={() => togglePin(point.id)}
+                    onToggleSaved={() => toggleSaved(point)}
                   />
                 ))}
               </ul>
             )}
 
-            {state.favourites.length > 0 ? (
-              <div className="flex flex-wrap gap-1">
-                {state.favourites.map((favourite) => (
-                  <button
-                    key={favourite.id}
-                    type="button"
-                    onClick={() => applyLocation(favourite)}
-                    className="max-w-full truncate rounded-full border border-border bg-muted/40 px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:text-foreground"
-                  >
-                    <Star className="mr-1 inline h-3 w-3 fill-current text-amber-400" />
-                    {favourite.label}
-                  </button>
-                ))}
+            {savedQuery.data && savedQuery.data.length > 0 ? (
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                  Saved locations
+                </span>
+                <div className="flex flex-wrap gap-1">
+                  {savedQuery.data.map((location) =>
+                    renamingId === location.id ? (
+                      <form
+                        key={location.id}
+                        onSubmit={(event) => {
+                          event.preventDefault();
+                          submitRename();
+                        }}
+                        className="flex items-center gap-1 rounded-full border border-ring bg-background px-2 py-0.5"
+                      >
+                        <input
+                          autoFocus
+                          value={renameValue}
+                          onChange={(event) => setRenameValue(event.target.value)}
+                          className="w-28 bg-transparent text-[11px] text-foreground outline-none"
+                        />
+                        <button
+                          type="submit"
+                          aria-label="Save name"
+                          className="text-muted-foreground transition-colors hover:text-foreground"
+                        >
+                          <Check className="h-3 w-3" />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="Cancel rename"
+                          onClick={() => setRenamingId(null)}
+                          className="text-muted-foreground transition-colors hover:text-foreground"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </form>
+                    ) : (
+                      <div
+                        key={location.id}
+                        className="flex max-w-full items-center rounded-full border border-border bg-muted/40 text-[11px] text-muted-foreground"
+                      >
+                        <button
+                          type="button"
+                          onClick={() =>
+                            applyLocation(
+                              {
+                                id: location.id,
+                                label: location.label,
+                                lat: location.lat,
+                                lon: location.lon,
+                                kind: null,
+                              },
+                              { append: true }
+                            )
+                          }
+                          className="min-w-0 truncate py-0.5 pl-2 pr-1 transition-colors hover:text-foreground"
+                        >
+                          <Star className="mr-1 inline h-3 w-3 fill-current text-amber-400" />
+                          {location.label}
+                        </button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              type="button"
+                              aria-label="Saved location options"
+                              className="py-0.5 pl-1 pr-2 transition-colors hover:text-foreground"
+                            >
+                              <MoreVertical className="h-3 w-3" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onSelect={() => startRename(location)}>
+                              Rename
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onSelect={() => removeSaved.mutate({ id: location.id })}
+                              className="text-destructive"
+                            >
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    )
+                  )}
+                </div>
               </div>
             ) : null}
 

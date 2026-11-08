@@ -154,16 +154,29 @@ defaultSize }`); `Widget.tsx` resolves the component/icon from there. The `kind`
   Komoot), `osrm` (driving/cycling/walking routes + TSP via `trip`) and `transitous` (MOTIS public-transit
   itineraries) through the `map` router (`packages/api/src/routers/maps.ts`). A `valhalla` connector
   implements the same normalized `RouteResult` and can replace OSRM by switching `ROUTING_ENGINE` there.
-  Per-instance state (`mode`/`points`/`favourites`, see `mapSettingsSchema`) is persisted in
-  `widgetGroup.settings` via `onSettingsChange`; `points[0]` is the origin and the rest are stops (legacy
-  `origin`/`stops` settings are migrated on load; the UI labels the list "Stops"). The Leaflet canvas
-  (`MapCanvas.tsx`) is dynamic-`ssr:false` like `WeatherRadar.tsx` and uses `Marker` + `divIcon` (so markers
-  are draggable) and `Polyline` (no marker-icon assets); it is `isolate`d so Leaflet's internal z-indexes
-  can't paint over modals/dropdowns. The Leaflet container is a dedicated child with a **stable
-  className**; never put dynamic React classes or React children on it, or React will overwrite
-  Leaflet's classes and blank the map. The widget's search box lives inside the active-point banner (rendered
-  only while adding/editing a point) and follows the shared search pattern above; the map is resizable
-  (drag handle, session-persisted) and the stops list fills the remaining height.
+  Per-instance state (`mode`/`points`/`pinnedIds`, see `mapSettingsSchema`) is persisted in
+  `widgetGroup.settings` via `onSettingsChange`; `points[0]` is the origin, the last point is the fixed
+  destination, and the rest are stops (legacy `origin`/`stops` settings are migrated on load; the UI labels
+  the list "Stops"). Pinned middle stops stay at their exact position; `map.optimize` splits the route into
+  segments between fixed anchors (origin, pinned stops, destination), optimizes each segment, and falls back
+  to `nearestNeighborOrder` from `@dashvu/core` on engine failure. OSRM uses `source=first&destination=last`
+  and `waypoint_index` is inverted into visiting order (never returned directly).
+- Map search is always visible in the map's non-scrolling area and follows the shared search pattern. The
+  `+` button toggles click-to-add mode; map clicks add only in that mode (or while editing a row), selecting a
+  result adds immediately, and `Use my location` is the crosshair inside the search bar. Saved locations are
+  **per user** (`savedLocation`, `map.listSavedLocations`/`create`/`import`/`rename`/`remove`), shared across
+  map instances, shown as quick-add chips with a kebab menu, and never drawn as map markers. Legacy
+  per-instance `favourites` are imported once, deduped by coordinates, then cleared only after success.
+- Per-user map state (`lastKnownLocation`, `geolocationPromptedAt`) lives in
+  `userPreferences.settings.map` via `map.getUserState`/`updateUserState`; `user.updatePreferences` merges
+  settings keys so theme/reduce-motion writes cannot wipe it. New empty map instances request geolocation
+  once (persisted prompt timestamp; denied/unavailable falls back to the last known location). The Leaflet
+  canvas (`MapCanvas.tsx`) is dynamic-`ssr:false` like `WeatherRadar.tsx` and uses `Marker` + `divIcon` (so
+  markers are draggable) and `Polyline` (no marker-icon assets); it is `isolate`d so Leaflet's internal
+  z-indexes can't paint over modals/dropdowns. The Leaflet container is a dedicated child with a **stable
+  className**; never put dynamic React classes or React children on it, or React will overwrite Leaflet's
+  classes and blank the map. The map is resizable (drag handle, session-persisted) and the stops list fills
+  the remaining height.
 - When overriding `authorization` on a provider whose default is a **string** (e.g. Spotify:
   `authorization: "https://accounts.spotify.com/authorize?scope=..."`), you must re-specify `url`, or
   Auth.js's deep-merge replaces the string with `{}` and drops the endpoint (causes `TypeError: Invalid URL`
@@ -320,15 +333,16 @@ app runnable after each change.
 - Instancing: create/select/update instance persists without reload.
 - Edit controls: settings/remove/resize still work after widget drag.
 
-### Phase 2 — Map UX
+### Phase 2 — Map UX (completed)
 
 #### 1. Extend map settings
 
-Files: `packages/validators/src/map.ts`, `apps/web/src/components/widgets/MapWidget.tsx`,
-`packages/db/src/schema.ts` if needed.
+Files: `packages/validators/src/maps.ts`, `apps/web/src/components/widgets/MapWidget.tsx`,
+`packages/db/src/schema.ts`.
 
-Add to per-instance settings: `pinnedIds: string[]` and
-`lastKnownLocation?: { lat, lon, label? }`. Keep existing `mode`, `points`, `favourites`.
+Per-instance settings: `mode`, `points`, `pinnedIds`, legacy `favourites` (migrated then cleared).
+Per-user map state (`lastKnownLocation`, `geolocationPromptedAt`) lives in
+`userPreferences.settings.map`.
 
 #### 2. Pinning and optimization
 
@@ -346,8 +360,8 @@ stops do not move; unpinned stops optimize around pins; engine failure still pro
 
 New table `savedLocation` keyed to `user.id`: `id`, `userId`, `label`, `lat`, `lon`, `createdAt`.
 
-Router: `map.listSavedLocations`, `map.createSavedLocation`, `map.renameSavedLocation`,
-`map.removeSavedLocation`.
+Router: `map.listSavedLocations`, `map.createSavedLocation`, `map.importSavedLocations`,
+`map.renameSavedLocation`, `map.removeSavedLocation`.
 
 UI:
 

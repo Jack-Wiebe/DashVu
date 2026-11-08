@@ -122,3 +122,45 @@ export function formatDistance(meters: number): string {
   if (meters >= 1000) return `${(meters / 1000).toFixed(meters >= 10_000 ? 0 : 1)} km`;
   return `${Math.round(meters)} m`;
 }
+
+/**
+ * Greedy nearest-neighbour visiting order. `startIndex` and `endIndex` stay
+ * fixed; every point between them is visited in proximity order. Returned
+ * values are indices into `points`.
+ */
+export function nearestNeighborOrder(
+  points: GeoPoint[],
+  startIndex = 0,
+  endIndex = points.length - 1
+): number[] {
+  const count = points.length;
+  if (count <= 1) return points.map((_, index) => index);
+
+  const start = Math.min(count - 1, Math.max(0, startIndex));
+  const end = Math.min(count - 1, Math.max(0, endIndex));
+  if (start === end) return points.map((_, index) => index);
+
+  const remaining = points
+    .map((_, index) => index)
+    .filter((index) => index !== start && index !== end);
+  const order = [start];
+  let current = points[start];
+
+  while (remaining.length > 0) {
+    let bestPosition = 0;
+    let bestDistance = Number.POSITIVE_INFINITY;
+    for (let position = 0; position < remaining.length; position += 1) {
+      const distance = haversineMeters(current, points[remaining[position]]);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestPosition = position;
+      }
+    }
+    const nextIndex = remaining.splice(bestPosition, 1)[0];
+    order.push(nextIndex);
+    current = points[nextIndex];
+  }
+
+  order.push(end);
+  return order;
+}

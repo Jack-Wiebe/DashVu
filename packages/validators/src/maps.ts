@@ -45,9 +45,40 @@ export const routeInputSchema = z.object({
 
 export type RouteInput = z.infer<typeof routeInputSchema>;
 
-export const optimizeInputSchema = routeInputSchema;
+export const optimizeInputSchema = routeInputSchema.extend({
+  /** Indices into `stops` that must keep their exact position. */
+  pinnedIndices: z
+    .array(
+      z
+        .number()
+        .int()
+        .min(0)
+        .max(MAX_MAP_STOPS - 1)
+    )
+    .max(MAX_MAP_STOPS)
+    .optional(),
+});
 
 export type OptimizeInput = z.infer<typeof optimizeInputSchema>;
+
+export const savedLocationInputSchema = geoPointSchema.extend({
+  label: z.string().trim().min(1).max(200),
+});
+
+export type SavedLocationInput = z.infer<typeof savedLocationInputSchema>;
+
+export const savedLocationsImportSchema = z.object({
+  locations: z.array(savedLocationInputSchema).max(50),
+});
+
+export const savedLocationRenameSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().trim().min(1).max(200),
+});
+
+export const savedLocationRemoveSchema = z.object({
+  id: z.string().min(1),
+});
 
 export const mapSettingsSchema = z.object({
   mode: travelModeSchema.optional(),
@@ -59,7 +90,21 @@ export const mapSettingsSchema = z.object({
     .array(geoPlaceSchema)
     .max(MAX_MAP_STOPS + 1)
     .optional(),
+  /** Stop ids whose positions are fixed when optimizing. */
+  pinnedIds: z.array(z.string().min(1)).max(MAX_MAP_STOPS).optional(),
+  /** Legacy per-instance favourites, migrated to user saved locations on load. */
   favourites: z.array(geoPlaceSchema).max(50).optional(),
 });
 
 export type MapSettings = z.infer<typeof mapSettingsSchema>;
+
+export const mapUserStateSchema = z.object({
+  lastKnownLocation: geoPlaceSchema.optional(),
+  geolocationPromptedAt: z.string().datetime().optional(),
+});
+
+export type MapUserState = z.infer<typeof mapUserStateSchema>;
+
+export const mapUserStateUpdateSchema = mapUserStateSchema.partial();
+
+export type MapUserStateUpdate = z.infer<typeof mapUserStateUpdateSchema>;

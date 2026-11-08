@@ -12,7 +12,7 @@ const DEFAULT_CENTER: [number, number] = [51.5074, -0.1278];
 
 export interface MapMarker extends GeoPoint {
   id: string;
-  role: "origin" | "stop";
+  role: "origin" | "destination" | "stop";
   index?: number;
 }
 
@@ -68,8 +68,6 @@ const MapCanvas = ({
   onPickRef.current = onPick;
   onViewportChangeRef.current = onViewportChange;
 
-  const focus = markers[0] ?? null;
-  const points = useMemo(() => markers.map(({ lat, lon }) => ({ lat, lon })), [markers]);
   const signature = useMemo(
     () =>
       markers
@@ -93,6 +91,7 @@ const MapCanvas = ({
       } catch {}
     }
 
+    const focus = markersRef.current[0] ?? null;
     const map = L.map(container, {
       center: focus ? [focus.lat, focus.lon] : DEFAULT_CENTER,
       zoom: focus ? 12 : 4,
@@ -172,6 +171,7 @@ const MapCanvas = ({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !ready) return;
+    const points = markersRef.current.map(({ lat, lon }) => ({ lat, lon }));
     if (points.length === 0) return;
     if (points.length === 1) {
       map.setView([points[0].lat, points[0].lon], Math.max(map.getZoom(), 12), { animate: false });
@@ -191,7 +191,9 @@ const MapCanvas = ({
       const icon =
         marker.role === "origin"
           ? badgeIcon("S", "#22c55e")
-          : badgeIcon(String(marker.index ?? "•"), "#3b82f6");
+          : marker.role === "destination"
+            ? badgeIcon("E", "#f43f5e")
+            : badgeIcon(String(marker.index ?? "•"), "#3b82f6");
       const m = L.marker([marker.lat, marker.lon], {
         icon,
         draggable: Boolean(onMarkerDragRef.current),
@@ -246,7 +248,7 @@ const MapCanvas = ({
     <div
       className={cn(
         "relative isolate min-h-0 h-full w-full overflow-hidden rounded-md border border-border",
-        pickActive && "cursor-crosshair",
+        pickActive && "cursor-crosshair [&_.leaflet-grab]:cursor-crosshair",
         className
       )}
     >

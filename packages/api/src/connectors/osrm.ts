@@ -69,7 +69,7 @@ export const osrmConnector: Connector<RoutingRequest, RouteResult> = {
     const coordinates = points.map((point) => `${point.lon},${point.lat}`).join(";");
     const query =
       action === "optimize"
-        ? `roundtrip=false&source=first&destination=any&${OSRM_OPTIONS}`
+        ? `roundtrip=false&source=first&destination=last&${OSRM_OPTIONS}`
         : OSRM_OPTIONS;
     const url = `${BASE_URL}/${service}/${action === "optimize" ? "trip" : "route"}/v1/${profile}/${coordinates}?${query}`;
 
@@ -90,7 +90,13 @@ export const osrmConnector: Connector<RoutingRequest, RouteResult> = {
 
       const order =
         action === "optimize"
-          ? (data.waypoints ?? []).map((waypoint) => waypoint.waypoint_index)
+          ? (data.waypoints ?? [])
+              .map((waypoint, inputIndex) => ({
+                inputIndex,
+                visitIndex: waypoint.waypoint_index,
+              }))
+              .sort((a, b) => a.visitIndex - b.visitIndex)
+              .map((entry) => entry.inputIndex)
           : undefined;
 
       return {

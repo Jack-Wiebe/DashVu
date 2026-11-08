@@ -21,7 +21,13 @@ export type {
   RelatedWord,
   RelatedRelation,
 } from "./dictionary";
-export { haversineMeters, decodePolyline, formatDuration, formatDistance } from "./maps";
+export {
+  haversineMeters,
+  decodePolyline,
+  formatDuration,
+  formatDistance,
+  nearestNeighborOrder,
+} from "./maps";
 export type {
   TravelMode,
   GeoPoint,

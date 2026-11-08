@@ -71,6 +71,13 @@
       "when": 1792036000000,
       "tag": "0009_widget_size_grid_tokens",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794085502177,
+      "tag": "0010_conscious_ghost_rider",
+      "breakpoints": true
     }
   ]
 }

@@ -9,7 +9,8 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
     "@dashvu/core": "workspace:*",
@@ -29,6 +30,7 @@
     "@dashvu/config": "workspace:*",
     "@types/node": "^20",
     "@types/spotify-web-api-node": "^5.0.11",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^5.1.0"
   }
 }

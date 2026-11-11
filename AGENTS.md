@@ -196,9 +196,14 @@ defaultSize }`); `Widget.tsx` resolves the component/icon from there. The `kind`
 
 ## Testing
 
-No test framework is installed yet. Current phase: **manual smoke checklist** (app-wide). Future phases
-add Vitest/Playwright with tests colocated next to source. When adding a test script, wire it into
-`turbo.json` and CI.
+Unit tests use **Vitest**, colocated next to source (`src/**/*.test.ts`), in `@dashvu/core`,
+`@dashvu/validators`, and `@dashvu/api`. Run them with `pnpm test` (Turborepo task wired into
+`turbo.json` and CI). Import assertions explicitly from `vitest` (no globals). The `@dashvu/api`
+config (`packages/api/vitest.config.ts`) resolves the `react-server` condition so
+`import "server-only"` modules are testable. `apps/web` has no test runner yet.
+
+Manual verification uses the smoke checklist in [`docs/smoke-checklist.md`](docs/smoke-checklist.md).
+Playwright E2E is planned but not yet set up — see [`docs/testing.md`](docs/testing.md).
 
 ## Commits
 

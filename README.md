@@ -66,6 +66,7 @@ export/import and per-widget settings panels. See [`AGENTS.md`](./AGENTS.md) for
 
 - [`AGENTS.md`](./AGENTS.md) — contributor and AI-agent guide (conventions, security rules, roadmap).
 - [`CLAUDE.md`](./CLAUDE.md) — quick reference for Claude Code.
+- [`docs/testing.md`](./docs/testing.md) — Playwright E2E plan (planned, not yet implemented).
 
 ## License
 
